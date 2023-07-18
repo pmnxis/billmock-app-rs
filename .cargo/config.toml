@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: © 2023 Jinwoo Park (pmnxis@gmail.com)
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+# replace STM32G071C8Rx with your chip as listed in `probe-rs-cli chip list`
+runner = "probe-rs-cli run --chip STM32G030C8Tx"
+
+[build]
+target = "thumbv6m-none-eabi"
+
+[env]
+DEFMT_LOG = "trace"

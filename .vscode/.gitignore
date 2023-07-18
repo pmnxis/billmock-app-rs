@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: © 2023 Jinwoo Park (pmnxis@gmail.com)
+#
+# SPDX-License-Identifier: CC0-1.0
+
+*.cortex-debug.*.json
+launch.json
+tasks.json
+*.cfg
