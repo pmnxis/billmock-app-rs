@@ -55,5 +55,4 @@ Also all of codes are based one MIT or Apache Software License 2.0. But some com
 <a name="footnote_3">3</a> `STM32G030C8` is STMicroelectronics' MCU with ARM-Cortex M0+ , 64KiB Flash and 8KiB SRAM. <br>
 ( https://www.st.com/en/microcontrollers-microprocessors/stm32g030c8.html ) <br><br>
 
-<a name="footnote_4">4</a>: `GPARK Co., Ltd.` is a company in South Korea that operates the arcade game industry. <br>
-( Business registration number in South Korea : `265-87-01155` )
+<a name="footnote_4">4</a>: `GPARK Co., Ltd.` is a company in South Korea that operates the arcade game industry.
