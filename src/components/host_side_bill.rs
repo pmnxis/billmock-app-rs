@@ -3,72 +3,51 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-use core::default;
 
 use embedded_hal::digital::OutputPin;
 use embedded_hal_async::digital::Wait;
 
-use crate::semi_layer::buffered_output::BufferedOuputPin;
-use crate::semi_layer::buffered_wait::BufferedWait;
-
-// use defmt::export::panic;
-// // mutex with channel
-// use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-// use embassy_sync::channel::Channel;
-// use embassy_time::{Duration, Timer};
-// use embedded_hal::digital::OutputPin;
-// use embedded_hal_async::digital::Wait;
-// use num_enum::{IntoPrimitive, TryFromPrimitive};
-// use {defmt_rtt as _, panic_probe as _};
-
-// use super::outie_signal_fsm::BufferedOuputPin;
-// use super::timing::{DualPoleToggleTiming, ToggleTiming};
-
-// pub const HOST_SIDE_INTERFACE_CH_SIZE: usize = 8;
-
-// pub enum HostSideEvent {
-//     Inhibitted,
-//     Normal,
-// }
-
-// #[derive(TryFromPrimitive, IntoPrimitive)]
-// #[repr(u8)]
-// pub enum HostSideOutChannel {
-//     Busy = 0,
-//     Vend = 1,
-//     Jam = 2,
-//     Start = 3,
-// }
+use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
+use crate::semi_layer::buffered_wait::{BufferedWait, InputEventChannel, InputPortKind};
+use crate::semi_layer::timing::DualPoleToggleTiming;
 
 pub struct HostSideBill<
-    IN_INHIBIT: Wait,
-    OUT_BUSY: OutputPin,
-    OUT_VEND: OutputPin,
-    OUT_JAM: OutputPin,
-    OUT_START: OutputPin,
+    InInhibit: Wait,
+    OutBusy: OutputPin,
+    OutVend: OutputPin,
+    OutJam: OutputPin,
+    OutStart: OutputPin,
 > {
-    in_inhibit: BufferedWait<IN_INHIBIT>,
-    out_busy: BufferedOuputPin<OUT_BUSY>,
-    out_vend: BufferedOuputPin<OUT_VEND>,
-    out_jam: BufferedOuputPin<OUT_JAM>,
-    out_start: BufferedOuputPin<OUT_START>,
+    in_inhibit: BufferedWait<InInhibit>,
+    out_busy: BufferedOpenDrain<OutBusy>,
+    out_vend: BufferedOpenDrain<OutVend>,
+    out_jam: BufferedOpenDrain<OutJam>,
+    out_start: BufferedOpenDrain<OutStart>,
 }
 
 impl<
-        IN_INHIBIT: Wait,
-        OUT_BUSY: OutputPin,
-        OUT_VEND: OutputPin,
-        OUT_JAM: OutputPin,
-        OUT_START: OutputPin,
-    > HostSideBill<IN_INHIBIT, OUT_BUSY, OUT_VEND, OUT_JAM, OUT_START>
+        InInhibit: Wait,
+        OutBusy: OutputPin,
+        OutVend: OutputPin,
+        OutJam: OutputPin,
+        OutStart: OutputPin,
+    > HostSideBill<InInhibit, OutBusy, OutVend, OutJam, OutStart>
 {
     pub fn new(
-        in_inhibit: IN_INHIBIT,
-        mut out_busy: OUT_BUSY,
-        mut out_vend: OUT_VEND,
-        mut out_jam: OUT_JAM,
-        mut out_start: OUT_START,
-    ) -> HostSideBill<IN_INHIBIT, OUT_BUSY, OUT_VEND, OUT_JAM, OUT_START> {
-        unimplemented!()
+        (in_inhibit, in_inhibit_event): (InInhibit, InputPortKind),
+        mut out_busy: OutBusy,
+        mut out_vend: OutVend,
+        mut out_jam: OutJam,
+        mut out_start: OutStart,
+        mpsc_ch: &'static InputEventChannel,
+        timing: &'static DualPoleToggleTiming,
+    ) -> HostSideBill<InInhibit, OutBusy, OutVend, OutJam, OutStart> {
+        Self {
+            in_inhibit: BufferedWait::new(in_inhibit, in_inhibit_event, mpsc_ch),
+            out_busy: BufferedOpenDrain::new(out_busy, timing),
+            out_vend: BufferedOpenDrain::new(out_vend, timing),
+            out_jam: BufferedOpenDrain::new(out_jam, timing),
+            out_start: BufferedOpenDrain::new(out_start, timing),
+        }
     }
 }

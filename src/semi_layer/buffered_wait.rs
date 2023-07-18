@@ -41,6 +41,8 @@ pub struct InputEvent {
     kind: TinyInputEventKind,
 }
 
+pub type InputEventChannel = Channel<ThreadModeRawMutex, InputEvent, MPSC_WAIT_INPUT_EVENT_CH_SIZE>;
+
 pub type TinyInputEventKind = u8;
 const TINY_LONG_PRESS_MAX: u8 = (0x1 << 7) - 1;
 
@@ -71,14 +73,14 @@ impl From<InputEventKind> for TinyInputEventKind {
 pub struct BufferedWait<WaitIo: Wait> {
     wait: WaitIo,
     port: InputPortKind,
-    channel: &'static Channel<ThreadModeRawMutex, InputEvent, MPSC_WAIT_INPUT_EVENT_CH_SIZE>,
+    channel: &'static InputEventChannel,
 }
 
 impl<WaitIo: Wait> BufferedWait<WaitIo> {
-    fn new(
+    pub fn new(
         mut wait: WaitIo,
         port: InputPortKind,
-        channel: &'static Channel<ThreadModeRawMutex, InputEvent, MPSC_WAIT_INPUT_EVENT_CH_SIZE>,
+        channel: &'static InputEventChannel,
     ) -> BufferedWait<WaitIo> {
         BufferedWait {
             wait,

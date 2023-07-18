@@ -27,16 +27,20 @@ impl Default for ToggleTiming {
 pub struct SharedToggleTiming(UnsafeCell<ToggleTiming>);
 
 impl SharedToggleTiming {
-    pub fn default(&self) {
-        unsafe { *self.0.get() = ToggleTiming::default() };
-    }
-
     pub fn set(&self, value: ToggleTiming) {
         unsafe { *self.0.get() = value };
     }
 
     pub fn get(&self) -> ToggleTiming {
         unsafe { *self.0.get().clone() }
+    }
+}
+
+impl Default for SharedToggleTiming {
+    fn default() -> Self {
+        Self {
+            0: UnsafeCell::new(ToggleTiming::default()),
+        }
     }
 }
 
@@ -50,4 +54,13 @@ pub struct DualPoleToggleTiming {
     /// prefer const-ish value (todo tided on const only)
     /// alt field is not allowed modification on runtime.
     pub alt: &'static ToggleTiming,
+}
+
+impl DualPoleToggleTiming {
+    pub fn new(
+        shared: &'static SharedToggleTiming,
+        alt: &'static ToggleTiming,
+    ) -> DualPoleToggleTiming {
+        Self { shared, alt }
+    }
 }

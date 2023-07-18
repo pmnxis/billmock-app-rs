@@ -4,34 +4,33 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-use defmt::export::panic;
-use embassy_time::{Duration, Timer};
 use embedded_hal::digital::OutputPin;
 use embedded_hal_async::digital::Wait;
-use {defmt_rtt as _, panic_probe as _};
 
-pub struct VendSideBill<OUT_INHIBIT: OutputPin, IN_VEND: Wait, IN_JAM: Wait> {
-    // hardware related
-    out_inhibit: OUT_INHIBIT,
-    in_vend: IN_VEND,
-    in_jam: IN_JAM,
+use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
+use crate::semi_layer::buffered_wait::{BufferedWait, InputEventChannel, InputPortKind};
+use crate::semi_layer::timing::DualPoleToggleTiming;
+
+pub struct VendSideBill<OutInhibit: OutputPin, InVend: Wait, InJam: Wait> {
+    out_inhibit: BufferedOpenDrain<OutInhibit>,
+    in_vend: BufferedWait<InVend>,
+    in_jam: BufferedWait<InJam>,
 }
 
-impl<OUT_INHIBIT: OutputPin, IN_VEND: Wait, IN_JAM: Wait>
-    VendSideBill<OUT_INHIBIT, IN_VEND, IN_JAM>
-{
+impl<OutInhibit: OutputPin, InVend: Wait, InJam: Wait> VendSideBill<OutInhibit, InVend, InJam> {
     pub fn new(
-        mut out_inhibit: OUT_INHIBIT,
-        in_vend: IN_VEND,
-        in_jam: IN_JAM,
-    ) -> VendSideBill<OUT_INHIBIT, IN_VEND, IN_JAM> {
-        // Ensure 5 pins are initialized.
+        mut out_inhibit: OutInhibit,
+        (in_vend, in_vend_event): (InVend, InputPortKind),
+        (in_jam, in_jam_event): (InJam, InputPortKind),
+        mpsc_ch: &'static InputEventChannel,
+        timing: &'static DualPoleToggleTiming,
+    ) -> VendSideBill<OutInhibit, InVend, InJam> {
         out_inhibit.set_low().ok();
 
-        VendSideBill {
-            out_inhibit,
-            in_vend,
-            in_jam,
+        Self {
+            out_inhibit: BufferedOpenDrain::new(out_inhibit, timing),
+            in_vend: BufferedWait::new(in_vend, in_vend_event, mpsc_ch),
+            in_jam: BufferedWait::new(in_jam, in_jam_event, mpsc_ch),
         }
     }
 }

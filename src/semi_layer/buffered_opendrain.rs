@@ -163,14 +163,14 @@ impl MicroHsm {
     }
 }
 
-pub struct BufferedOuputPin<OutIo: OutputPin> {
+pub struct BufferedOpenDrain<OutIo: OutputPin> {
     io: OutIo,
     timing: &'static DualPoleToggleTiming,
     channel_hsm: Channel<ThreadModeRawMutex, MicroHsm, HOST_SIDE_INTERFACE_CH_SIZE>,
     hsm: MicroHsm,
 }
 
-impl<OutIo: OutputPin> BufferedOuputPin<OutIo> {
+impl<OutIo: OutputPin> BufferedOpenDrain<OutIo> {
     pub fn reflect_on_io(&mut self) {
         match self.hsm.expect_output_pin_state() {
             false => self.io.set_low(),
