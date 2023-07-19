@@ -43,7 +43,6 @@ const CARD_GADGET_RX_BUFFER_SIZE: usize = 768; // most of packet is 320~330 byte
 const CARD_GADGET_TX_BUFFER_SIZE: usize = 128; // most of pakcet is 6~12 bytes, but some uncommon command can be long
 
 static ASYNC_INPUT_EVENT_CH: InputEventChannel = Channel::new();
-// https://crates.io/crates/once_cell
 static COMMON_COIN_SIGNAL_TIMING: SharedToggleTiming = SharedToggleTiming::default();
 static COMMON_ALT_SIGNAL_TIMING: ToggleTiming = ToggleTiming::default();
 static COMMON_TIMING: DualPoleToggleTiming =

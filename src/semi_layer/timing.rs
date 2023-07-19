@@ -13,8 +13,8 @@ pub struct ToggleTiming {
     pub low_ms: u16,
 }
 
-impl Default for ToggleTiming {
-    fn default() -> Self {
+impl ToggleTiming {
+    pub const fn default() -> Self {
         // default is 100ms high low signal.
         ToggleTiming {
             high_ms: 100,
@@ -27,20 +27,25 @@ impl Default for ToggleTiming {
 pub struct SharedToggleTiming(UnsafeCell<ToggleTiming>);
 
 impl SharedToggleTiming {
+    pub const fn new_custom(timing: ToggleTiming) -> Self {
+        // https://doc.rust-lang.org/reference/const_eval.html#const-functions
+        Self {
+            0: UnsafeCell::new(timing),
+        }
+    }
+
+    pub const fn default() -> Self {
+        Self {
+            0: UnsafeCell::new(ToggleTiming::default()),
+        }
+    }
+
     pub fn set(&self, value: ToggleTiming) {
         unsafe { *self.0.get() = value };
     }
 
     pub fn get(&self) -> ToggleTiming {
         unsafe { *self.0.get().clone() }
-    }
-}
-
-impl Default for SharedToggleTiming {
-    fn default() -> Self {
-        Self {
-            0: UnsafeCell::new(ToggleTiming::default()),
-        }
     }
 }
 
@@ -57,7 +62,7 @@ pub struct DualPoleToggleTiming {
 }
 
 impl DualPoleToggleTiming {
-    pub fn new(
+    pub const fn new(
         shared: &'static SharedToggleTiming,
         alt: &'static ToggleTiming,
     ) -> DualPoleToggleTiming {
