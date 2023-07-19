@@ -22,12 +22,13 @@ use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
 use embedded_io::asynch::{Read, Write};
+use semi_layer::buffered_opendrain::BufferedOpenDrain;
 use {defmt_rtt as _, panic_probe as _};
 
 use crate::components::dip_switch::DipSwitch;
 use crate::components::host_side_bill::HostSideBill;
+use crate::components::start_button::StartButton;
 use crate::components::vend_side_bill::VendSideBill;
-use crate::components::virtual_start::VirtualStart;
 use crate::semi_layer::buffered_wait::{InputEventChannel, InputPortKind};
 use crate::semi_layer::timing::{DualPoleToggleTiming, SharedToggleTiming, ToggleTiming};
 
@@ -43,10 +44,31 @@ const CARD_GADGET_RX_BUFFER_SIZE: usize = 768; // most of packet is 320~330 byte
 const CARD_GADGET_TX_BUFFER_SIZE: usize = 128; // most of pakcet is 6~12 bytes, but some uncommon command can be long
 
 static ASYNC_INPUT_EVENT_CH: InputEventChannel = Channel::new();
+
+// Open-drain signal timing that shared or const-ish
 static COMMON_COIN_SIGNAL_TIMING: SharedToggleTiming = SharedToggleTiming::default();
 static COMMON_ALT_SIGNAL_TIMING: ToggleTiming = ToggleTiming::default();
 static COMMON_TIMING: DualPoleToggleTiming =
     DualPoleToggleTiming::new(&COMMON_COIN_SIGNAL_TIMING, &COMMON_ALT_SIGNAL_TIMING);
+
+// LED and start button LED related timing that shared or const-ish.
+static START_BUTTON_LED_STD_TIMING: SharedToggleTiming =
+    SharedToggleTiming::new_custom(ToggleTiming {
+        high_ms: 500,
+        low_ms: 500,
+    });
+static COMMON_LED_STD_TIMING: SharedToggleTiming = SharedToggleTiming::new_custom(ToggleTiming {
+    high_ms: 500,
+    low_ms: 500,
+});
+static COMMON_LED_ALT_TIMING: ToggleTiming = ToggleTiming {
+    high_ms: 1000,
+    low_ms: 1000,
+};
+static START_BUTTON_LED_TIMING: DualPoleToggleTiming =
+    DualPoleToggleTiming::new(&START_BUTTON_LED_STD_TIMING, &COMMON_LED_ALT_TIMING);
+static COMMON_LED_TIMING: DualPoleToggleTiming =
+    DualPoleToggleTiming::new(&COMMON_LED_STD_TIMING, &COMMON_LED_ALT_TIMING);
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -67,14 +89,24 @@ async fn main(_spawner: Spawner) {
         &COMMON_TIMING,
     );
 
-    let start_1p = VirtualStart::new(
-        ExtiInput::new(Input::new(p.PB11, Pull::None), p.EXTI11), // REAL_STR0
-        Output::new(p.PA0, Level::Low, Speed::Low),               // VIRT0_VND
+    let start_1p = StartButton::new(
+        (
+            ExtiInput::new(Input::new(p.PB11, Pull::None), p.EXTI11),
+            InputPortKind::Start1P,
+        ), // REAL_STR0
+        Output::new(p.PA0, Level::Low, Speed::Low), // VIRT0_VND
+        &ASYNC_INPUT_EVENT_CH,
+        &START_BUTTON_LED_TIMING,
     );
 
-    let start_2p = VirtualStart::new(
-        ExtiInput::new(Input::new(p.PD1, Pull::None), p.EXTI1), // REAL_STR1
-        Output::new(p.PA1, Level::Low, Speed::Low),             // VIRT1_VND
+    let start_2p = StartButton::new(
+        (
+            ExtiInput::new(Input::new(p.PD1, Pull::None), p.EXTI1),
+            InputPortKind::Start2P,
+        ), // REAL_STR1
+        Output::new(p.PA1, Level::Low, Speed::Low), // VIRT1_VND
+        &ASYNC_INPUT_EVENT_CH,
+        &START_BUTTON_LED_TIMING,
     );
 
     let host_1p = HostSideBill::new(
@@ -112,7 +144,16 @@ async fn main(_spawner: Spawner) {
         Input::new(p.PB12, Pull::Up), // DIPSW5
     );
 
-    let mut led: Output<'_, PA5> = Output::new(p.PA5, Level::High, Speed::Low);
+    let (mut led0, mut led1) = (
+        BufferedOpenDrain::new(
+            Output::new(p.PA4, Level::High, Speed::Low),
+            &COMMON_LED_TIMING,
+        ), // INDICATE0
+        BufferedOpenDrain::new(
+            Output::new(p.PA5, Level::High, Speed::Low),
+            &COMMON_LED_TIMING,
+        ), // INDICATE1
+    );
 
     // temporary usart configuration
     let mut tx_buffer = [0u8; CARD_GADGET_TX_BUFFER_SIZE];
@@ -135,11 +176,11 @@ async fn main(_spawner: Spawner) {
 
     loop {
         info!("high");
-        led.set_high();
+        // led.set_high();
         Timer::after(Duration::from_millis(300)).await;
 
         info!("low");
-        led.set_low();
+        // led.set_low();
         Timer::after(Duration::from_millis(300)).await;
 
         match usart2.read(&mut buf).await {
