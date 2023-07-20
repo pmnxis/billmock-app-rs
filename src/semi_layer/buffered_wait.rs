@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
+use embassy_stm32::exti::ExtiInput;
+use embassy_stm32::gpio::AnyPin;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{with_timeout, Duration, Instant, Timer};
-use embedded_hal_async::digital::Wait;
+use embassy_time::Instant;
 
 pub const MPSC_WAIT_INPUT_EVENT_CH_SIZE: usize = 32;
 
@@ -48,7 +49,7 @@ const TINY_LONG_PRESS_MAX: u8 = (0x1 << 7) - 1;
 
 impl From<TinyInputEventKind> for InputEventKind {
     fn from(value: TinyInputEventKind) -> Self {
-        if (value & (0x1 << 7) != 0) {
+        if value & (0x1 << 7) != 0 {
             return Self::Released;
         } else {
             match value & 0b01111111 {
@@ -70,18 +71,18 @@ impl From<InputEventKind> for TinyInputEventKind {
 }
 
 /// Internal PullUp + 4050 + OpenDrain outside (NMOS or ULN2803)
-pub struct BufferedWait<WaitIo: Wait> {
-    wait: WaitIo,
+pub struct BufferedWait {
+    wait: ExtiInput<'static, AnyPin>,
     port: InputPortKind,
     channel: &'static InputEventChannel,
 }
 
-impl<WaitIo: Wait> BufferedWait<WaitIo> {
-    pub fn new(
-        mut wait: WaitIo,
+impl BufferedWait {
+    pub const fn new(
+        wait: ExtiInput<'static, AnyPin>,
         port: InputPortKind,
         channel: &'static InputEventChannel,
-    ) -> BufferedWait<WaitIo> {
+    ) -> BufferedWait {
         BufferedWait {
             wait,
             port,
@@ -123,4 +124,11 @@ impl<WaitIo: Wait> BufferedWait<WaitIo> {
             self.send(InputEventKind::Released).await;
         }
     }
+}
+
+// in HW v0.2 pool usage would be 6.
+// PCB use 6 EXTI
+#[embassy_executor::task(pool_size = 16)]
+pub async fn buffered_wait_spawn(instance: &'static mut BufferedWait) {
+    instance.run().await
 }

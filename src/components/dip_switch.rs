@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-use defmt::export::panic;
 use embedded_hal::digital::InputPin;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -35,7 +34,7 @@ impl<
         AnyPin5: InputPin,
     > DipSwitch<AnyPin0, AnyPin1, AnyPin2, AnyPin3, AnyPin4, AnyPin5>
 {
-    pub fn new(
+    pub const fn new(
         in_price0: AnyPin0,
         in_price1: AnyPin1,
         in_timing0: AnyPin2,

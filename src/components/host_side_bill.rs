@@ -4,44 +4,32 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-use embedded_hal::digital::OutputPin;
-use embedded_hal_async::digital::Wait;
+use embassy_stm32::exti::ExtiInput;
+use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
 use crate::semi_layer::buffered_wait::{BufferedWait, InputEventChannel, InputPortKind};
 use crate::semi_layer::timing::DualPoleToggleTiming;
 
-pub struct HostSideBill<
-    InInhibit: Wait,
-    OutBusy: OutputPin,
-    OutVend: OutputPin,
-    OutJam: OutputPin,
-    OutStart: OutputPin,
-> {
-    in_inhibit: BufferedWait<InInhibit>,
-    out_busy: BufferedOpenDrain<OutBusy>,
-    out_vend: BufferedOpenDrain<OutVend>,
-    out_jam: BufferedOpenDrain<OutJam>,
-    out_start: BufferedOpenDrain<OutStart>,
+pub struct HostSideBill {
+    in_inhibit: BufferedWait,
+    out_busy: BufferedOpenDrain,
+    out_vend: BufferedOpenDrain,
+    out_jam: BufferedOpenDrain,
+    out_start: BufferedOpenDrain,
 }
 
-impl<
-        InInhibit: Wait,
-        OutBusy: OutputPin,
-        OutVend: OutputPin,
-        OutJam: OutputPin,
-        OutStart: OutputPin,
-    > HostSideBill<InInhibit, OutBusy, OutVend, OutJam, OutStart>
-{
-    pub fn new(
-        (in_inhibit, in_inhibit_event): (InInhibit, InputPortKind),
-        mut out_busy: OutBusy,
-        mut out_vend: OutVend,
-        mut out_jam: OutJam,
-        mut out_start: OutStart,
+impl HostSideBill {
+    pub const fn new(
+        in_inhibit: ExtiInput<'static, AnyPin>,
+        in_inhibit_event: InputPortKind,
+        out_busy: Output<'static, AnyPin>,
+        out_vend: Output<'static, AnyPin>,
+        out_jam: Output<'static, AnyPin>,
+        out_start: Output<'static, AnyPin>,
         mpsc_ch: &'static InputEventChannel,
         timing: &'static DualPoleToggleTiming,
-    ) -> HostSideBill<InInhibit, OutBusy, OutVend, OutJam, OutStart> {
+    ) -> Self {
         Self {
             in_inhibit: BufferedWait::new(in_inhibit, in_inhibit_event, mpsc_ch),
             out_busy: BufferedOpenDrain::new(out_busy, timing),

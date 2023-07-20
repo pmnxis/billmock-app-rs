@@ -14,15 +14,14 @@ mod types;
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_stm32::exti::ExtiInput;
-use embassy_stm32::gpio::{Input, Level, Output, Pull, Speed};
+use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
+use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
 use embassy_stm32::peripherals::*;
-use embassy_stm32::usart::{self, BufferedInterruptHandler, BufferedUart, Config as UartConfig};
+use embassy_stm32::usart::{BufferedInterruptHandler, BufferedUart, Config as UartConfig};
 use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
-use embassy_time::{Duration, Timer};
-use embedded_io::asynch::{Read, Write};
-use semi_layer::buffered_opendrain::BufferedOpenDrain;
+use semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
+use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
 use crate::components::dip_switch::DipSwitch;
@@ -37,9 +36,6 @@ bind_interrupts!(struct Irqs {
 });
 
 // Test queue stuff
-
-// End of test queue stuff
-
 const CARD_GADGET_RX_BUFFER_SIZE: usize = 768; // most of packet is 320~330 bytes
 const CARD_GADGET_TX_BUFFER_SIZE: usize = 128; // most of pakcet is 6~12 bytes, but some uncommon command can be long
 
@@ -71,71 +67,77 @@ static COMMON_LED_TIMING: DualPoleToggleTiming =
     DualPoleToggleTiming::new(&COMMON_LED_STD_TIMING, &COMMON_LED_ALT_TIMING);
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) {
+async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
     info!("Hello World!");
 
-    let vend_legacy = VendSideBill::new(
-        Output::new(p.PB0, Level::Low, Speed::Low), // REAL_INH
-        (
-            ExtiInput::new(Input::new(p.PB2, Pull::None), p.EXTI2),
-            InputPortKind::Vend,
-        ), // REAL_VND
-        (
-            ExtiInput::new(Input::new(p.PB14, Pull::None), p.EXTI14),
-            InputPortKind::Jam,
-        ), // REAL_JAM (moved)
+    let _vend_legacy = VendSideBill::new(
+        Output::new(p.PB0.degrade(), Level::Low, Speed::Low), // REAL_INH
+        ExtiInput::new(
+            Input::new(p.PB2, Pull::None).degrade(), // REAL_VND
+            p.EXTI2.degrade(),                       // EXTI2
+        ),
+        InputPortKind::Vend,
+        ExtiInput::new(
+            Input::new(p.PB14, Pull::None).degrade(), // REAL_JAM (moved from PB15 at HW v0.3)
+            p.EXTI14.degrade(),                       // EXTI14
+        ),
+        InputPortKind::Jam,
         &ASYNC_INPUT_EVENT_CH,
         &COMMON_TIMING,
     );
 
-    let start_1p = StartButton::new(
-        (
-            ExtiInput::new(Input::new(p.PB11, Pull::None), p.EXTI11),
-            InputPortKind::Start1P,
-        ), // REAL_STR0
-        Output::new(p.PA0, Level::Low, Speed::Low), // VIRT0_VND
+    let _start_1p = StartButton::new(
+        ExtiInput::new(
+            Input::new(p.PB11, Pull::None).degrade(), // REAL_STR0
+            p.EXTI11.degrade(),                       // EXTI11
+        ),
+        InputPortKind::Start1P,
+        Output::new(p.PA0.degrade(), Level::Low, Speed::Low), // VIRT0_VND
         &ASYNC_INPUT_EVENT_CH,
         &START_BUTTON_LED_TIMING,
     );
 
-    let start_2p = StartButton::new(
-        (
-            ExtiInput::new(Input::new(p.PD1, Pull::None), p.EXTI1),
-            InputPortKind::Start2P,
-        ), // REAL_STR1
-        Output::new(p.PA1, Level::Low, Speed::Low), // VIRT1_VND
+    let _start_2p = StartButton::new(
+        ExtiInput::new(
+            Input::new(p.PD1, Pull::None).degrade(), // REAL_STR1
+            p.EXTI1.degrade(),                       // EXTI1
+        ),
+        InputPortKind::Start2P,
+        Output::new(p.PA1.degrade(), Level::Low, Speed::Low), // VIRT1_VND
         &ASYNC_INPUT_EVENT_CH,
         &START_BUTTON_LED_TIMING,
     );
 
-    let host_1p = HostSideBill::new(
-        (
-            ExtiInput::new(Input::new(p.PD0, Pull::None), p.EXTI0),
-            InputPortKind::Inhibit1,
-        ), // VIRT0_INH
-        Output::new(p.PD3, Level::Low, Speed::Low), // VIRT0_BSY
-        Output::new(p.PD2, Level::Low, Speed::Low), // VIRT0_VND
-        Output::new(p.PB9, Level::Low, Speed::Low), // VIRT0_JAM
-        Output::new(p.PB3, Level::Low, Speed::Low), // VIRT0_STR
+    let _host_1p = HostSideBill::new(
+        ExtiInput::new(
+            Input::new(p.PD0, Pull::None).degrade(), // VIRT0_INH
+            p.EXTI0.degrade(),                       // EXTI0
+        ),
+        InputPortKind::Inhibit1,
+        Output::new(p.PD3.degrade(), Level::Low, Speed::Low), // VIRT0_BSY
+        Output::new(p.PD2.degrade(), Level::Low, Speed::Low), // VIRT0_VND
+        Output::new(p.PB9.degrade(), Level::Low, Speed::Low), // VIRT0_JAM
+        Output::new(p.PB3.degrade(), Level::Low, Speed::Low), // VIRT0_STR
         &ASYNC_INPUT_EVENT_CH,
         &COMMON_TIMING,
     );
 
-    let host_2p = HostSideBill::new(
-        (
-            ExtiInput::new(Input::new(p.PA15, Pull::None), p.EXTI15),
-            InputPortKind::Inhibit2,
-        ), // VIRT1_INH
-        Output::new(p.PB4, Level::Low, Speed::Low), // VIRT1_BSY
-        Output::new(p.PC13, Level::Low, Speed::Low), // VIRT1_VND
-        Output::new(p.PB8, Level::Low, Speed::Low), // VIRT1_JAM
-        Output::new(p.PB5, Level::Low, Speed::Low), // VIRT1_STR
+    let _host_2p = HostSideBill::new(
+        ExtiInput::new(
+            Input::new(p.PA15, Pull::None).degrade(), // VIRT1_INH
+            p.EXTI15.degrade(),                       // EXTI15
+        ),
+        InputPortKind::Inhibit2,
+        Output::new(p.PB4.degrade(), Level::Low, Speed::Low), // VIRT1_BSY
+        Output::new(p.PC13.degrade(), Level::Low, Speed::Low), // VIRT1_VND
+        Output::new(p.PB8.degrade(), Level::Low, Speed::Low), // VIRT1_JAM
+        Output::new(p.PB5.degrade(), Level::Low, Speed::Low), // VIRT1_STR
         &ASYNC_INPUT_EVENT_CH,
         &COMMON_TIMING,
     );
 
-    let dipsw = DipSwitch::new(
+    let _dipsw = DipSwitch::new(
         Input::new(p.PC6, Pull::Up),  // DIPSW0
         Input::new(p.PA12, Pull::Up), // DIPSW1
         Input::new(p.PA11, Pull::Up), // DIPSW2
@@ -144,23 +146,22 @@ async fn main(_spawner: Spawner) {
         Input::new(p.PB12, Pull::Up), // DIPSW5
     );
 
-    let (mut led0, mut led1) = (
-        BufferedOpenDrain::new(
-            Output::new(p.PA4, Level::High, Speed::Low),
-            &COMMON_LED_TIMING,
-        ), // INDICATE0
-        BufferedOpenDrain::new(
-            Output::new(p.PA5, Level::High, Speed::Low),
-            &COMMON_LED_TIMING,
-        ), // INDICATE1
-    );
+    let mut led0 = make_static!(BufferedOpenDrain::new(
+        Output::new(p.PA4.degrade(), Level::High, Speed::Low),
+        &COMMON_LED_TIMING,
+    )); // INDICATE0
+
+    let mut led1 = make_static!(BufferedOpenDrain::new(
+        Output::new(p.PA5.degrade(), Level::High, Speed::Low),
+        &COMMON_LED_TIMING,
+    )); // INDICATE1
 
     // temporary usart configuration
     let mut tx_buffer = [0u8; CARD_GADGET_TX_BUFFER_SIZE];
     let mut rx_buffer = [0u8; CARD_GADGET_RX_BUFFER_SIZE];
     let uart2_config = UartConfig::default();
 
-    let mut usart2: BufferedUart<'_, USART2> = BufferedUart::new(
+    let mut _usart2: BufferedUart<'_, USART2> = BufferedUart::new(
         p.USART2,
         Irqs,
         p.PA3, // R_RXD
@@ -170,22 +171,12 @@ async fn main(_spawner: Spawner) {
         uart2_config,
     );
 
+    unwrap!(spawner.spawn(buffered_opendrain_spawn(led0)));
+    unwrap!(spawner.spawn(buffered_opendrain_spawn(led1)));
+
     // usart2.write_all(b"Hello Embassy World!\r\n").await.unwrap();
     info!("wrote Hello, starting echo");
-    let mut buf = [0; CARD_GADGET_RX_BUFFER_SIZE];
+    let mut _buf = [0; CARD_GADGET_RX_BUFFER_SIZE];
 
-    loop {
-        info!("high");
-        // led.set_high();
-        Timer::after(Duration::from_millis(300)).await;
-
-        info!("low");
-        // led.set_low();
-        Timer::after(Duration::from_millis(300)).await;
-
-        match usart2.read(&mut buf).await {
-            Ok(cnt) => info!("uart read {} : {:?}", cnt, buf[0..cnt]),
-            _ => {}
-        }
-    }
+    loop {}
 }

@@ -4,14 +4,16 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
+use embassy_stm32::gpio::{AnyPin, Output};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{with_timeout, Duration, Instant, Timer};
-use embedded_hal::digital::OutputPin;
 
 use super::timing::{DualPoleToggleTiming, ToggleTiming};
 
 pub const HOST_SIDE_INTERFACE_CH_SIZE: usize = 2;
+pub type OpenDrainRequestChannel =
+    Channel<ThreadModeRawMutex, MicroHsm, HOST_SIDE_INTERFACE_CH_SIZE>;
 
 pub struct NanoFsm {
     /// Given or left toggle number
@@ -110,9 +112,9 @@ pub enum MicroHsm {
     AltForeverBlink(BlinkFsm),
 }
 
-impl Default for MicroHsm {
+impl MicroHsm {
     /// Default init is `SetLow`
-    fn default() -> Self {
+    pub const fn default() -> Self {
         Self::SetLow
     }
 }
@@ -163,14 +165,14 @@ impl MicroHsm {
     }
 }
 
-pub struct BufferedOpenDrain<OutIo: OutputPin> {
-    io: OutIo,
+pub struct BufferedOpenDrain {
+    io: Output<'static, AnyPin>,
     timing: &'static DualPoleToggleTiming,
-    channel_hsm: Channel<ThreadModeRawMutex, MicroHsm, HOST_SIDE_INTERFACE_CH_SIZE>,
+    channel_hsm: OpenDrainRequestChannel,
     hsm: MicroHsm,
 }
 
-impl<OutIo: OutputPin> BufferedOpenDrain<OutIo> {
+impl BufferedOpenDrain {
     pub fn reflect_on_io(&mut self) {
         match self.hsm.expect_output_pin_state() {
             false => self.io.set_low(),
@@ -182,21 +184,22 @@ impl<OutIo: OutputPin> BufferedOpenDrain<OutIo> {
         self.hsm.next_sched_time()
     }
 
-    pub fn new(mut out_pin: OutIo, timing: &'static DualPoleToggleTiming) -> Self {
-        let mut ret = Self {
+    pub const fn new(
+        mut out_pin: Output<'static, AnyPin>,
+        timing: &'static DualPoleToggleTiming,
+    ) -> Self {
+        Self {
             io: out_pin,
             timing,
             channel_hsm: Channel::new(),
             hsm: MicroHsm::default(),
-        };
-
-        ret.reflect_on_io();
-
-        ret
+        }
     }
 
-    pub async fn run(&mut self) -> ! {
+    pub async fn run(&mut self) {
+        self.reflect_on_io();
         let mut last = Instant::now();
+
         loop {
             let request = match (self.next_sched_time(), self.hsm.is_busy()) {
                 (Some(wait_ms), false) => {
@@ -240,4 +243,11 @@ impl<OutIo: OutputPin> BufferedOpenDrain<OutIo> {
             last = Instant::now();
         }
     }
+}
+
+// in HW v0.2 pool usage would be 13.
+// PCB has 13 N-MOS open-drain.
+#[embassy_executor::task(pool_size = 16)]
+pub async fn buffered_opendrain_spawn(instance: &'static mut BufferedOpenDrain) {
+    instance.run().await
 }

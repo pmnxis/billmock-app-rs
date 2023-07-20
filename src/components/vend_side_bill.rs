@@ -4,29 +4,29 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-use embedded_hal::digital::OutputPin;
-use embedded_hal_async::digital::Wait;
+use embassy_stm32::exti::ExtiInput;
+use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
 use crate::semi_layer::buffered_wait::{BufferedWait, InputEventChannel, InputPortKind};
 use crate::semi_layer::timing::DualPoleToggleTiming;
 
-pub struct VendSideBill<OutInhibit: OutputPin, InVend: Wait, InJam: Wait> {
-    out_inhibit: BufferedOpenDrain<OutInhibit>,
-    in_vend: BufferedWait<InVend>,
-    in_jam: BufferedWait<InJam>,
+pub struct VendSideBill {
+    out_inhibit: BufferedOpenDrain,
+    in_vend: BufferedWait,
+    in_jam: BufferedWait,
 }
 
-impl<OutInhibit: OutputPin, InVend: Wait, InJam: Wait> VendSideBill<OutInhibit, InVend, InJam> {
-    pub fn new(
-        mut out_inhibit: OutInhibit,
-        (in_vend, in_vend_event): (InVend, InputPortKind),
-        (in_jam, in_jam_event): (InJam, InputPortKind),
+impl VendSideBill {
+    pub const fn new(
+        out_inhibit: Output<'static, AnyPin>,
+        in_vend: ExtiInput<'static, AnyPin>,
+        in_vend_event: InputPortKind,
+        in_jam: ExtiInput<'static, AnyPin>,
+        in_jam_event: InputPortKind,
         mpsc_ch: &'static InputEventChannel,
         timing: &'static DualPoleToggleTiming,
-    ) -> VendSideBill<OutInhibit, InVend, InJam> {
-        out_inhibit.set_low().ok();
-
+    ) -> VendSideBill {
         Self {
             out_inhibit: BufferedOpenDrain::new(out_inhibit, timing),
             in_vend: BufferedWait::new(in_vend, in_vend_event, mpsc_ch),
