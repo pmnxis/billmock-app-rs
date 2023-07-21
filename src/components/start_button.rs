@@ -4,11 +4,15 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
+use defmt::unwrap;
+use embassy_executor::Spawner;
 use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{AnyPin, Output};
 
-use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
-use crate::semi_layer::buffered_wait::{BufferedWait, InputEventChannel, InputPortKind};
+use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
+use crate::semi_layer::buffered_wait::{
+    buffered_wait_spawn, BufferedWait, InputEventChannel, InputPortKind,
+};
 use crate::semi_layer::timing::DualPoleToggleTiming;
 
 pub struct StartButton {
@@ -28,5 +32,10 @@ impl StartButton {
             in_switch: BufferedWait::new(in_switch, in_switch_event, mpsc_ch),
             out_led: BufferedOpenDrain::new(out_led, timing),
         }
+    }
+
+    pub fn start_tasks(&'static self, spawner: &Spawner) {
+        unwrap!(spawner.spawn(buffered_wait_spawn(&self.in_switch)));
+        unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.out_led)));
     }
 }

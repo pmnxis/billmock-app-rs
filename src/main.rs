@@ -70,9 +70,10 @@ static COMMON_LED_TIMING: DualPoleToggleTiming =
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
-    info!("Hello World!");
+    info!("billmock-app-rs starting...");
 
-    let _vend_legacy = VendSideBill::new(
+    // Vend legacy device initialization
+    let vend_legacy = make_static!(VendSideBill::new(
         Output::new(p.PB0.degrade(), Level::Low, Speed::Low), // REAL_INH
         ExtiInput::new(
             Input::new(p.PB2, Pull::None).degrade(), // REAL_VND
@@ -86,9 +87,12 @@ async fn main(spawner: Spawner) {
         InputPortKind::Jam,
         &ASYNC_INPUT_EVENT_CH,
         &COMMON_TIMING,
-    );
+    ));
+    vend_legacy.start_tasks(&spawner);
+    info!("Legacy vend side bill module loaded");
 
-    let _start_1p = StartButton::new(
+    // Player 1 button with (LED+switch) initialization
+    let start_1p = make_static!(StartButton::new(
         ExtiInput::new(
             Input::new(p.PB11, Pull::None).degrade(), // REAL_STR0
             p.EXTI11.degrade(),                       // EXTI11
@@ -97,9 +101,12 @@ async fn main(spawner: Spawner) {
         Output::new(p.PA0.degrade(), Level::Low, Speed::Low), // VIRT0_VND
         &ASYNC_INPUT_EVENT_CH,
         &START_BUTTON_LED_TIMING,
-    );
+    ));
+    start_1p.start_tasks(&spawner);
+    info!("Real player 1 button module loaded");
 
-    let _start_2p = StartButton::new(
+    // Player 2 button with (LED+switch) initialization
+    let start_2p = make_static!(StartButton::new(
         ExtiInput::new(
             Input::new(p.PD1, Pull::None).degrade(), // REAL_STR1
             p.EXTI1.degrade(),                       // EXTI1
@@ -108,9 +115,12 @@ async fn main(spawner: Spawner) {
         Output::new(p.PA1.degrade(), Level::Low, Speed::Low), // VIRT1_VND
         &ASYNC_INPUT_EVENT_CH,
         &START_BUTTON_LED_TIMING,
-    );
+    ));
+    start_2p.start_tasks(&spawner);
+    info!("Real player 2 button module loaded");
 
-    let _host_1p = HostSideBill::new(
+    // Game IO PCB side player 1 mocked module initialization
+    let host_1p = make_static!(HostSideBill::new(
         ExtiInput::new(
             Input::new(p.PD0, Pull::None).degrade(), // VIRT0_INH
             p.EXTI0.degrade(),                       // EXTI0
@@ -122,9 +132,12 @@ async fn main(spawner: Spawner) {
         Output::new(p.PB3.degrade(), Level::Low, Speed::Low), // VIRT0_STR
         &ASYNC_INPUT_EVENT_CH,
         &COMMON_TIMING,
-    );
+    ));
+    host_1p.start_tasks(&spawner);
+    info!("Game IO PCB side player 1 module loaded");
 
-    let _host_2p = HostSideBill::new(
+    // Game IO PCB side player 2 mocked module initialization
+    let host_2p = make_static!(HostSideBill::new(
         ExtiInput::new(
             Input::new(p.PA15, Pull::None).degrade(), // VIRT1_INH
             p.EXTI15.degrade(),                       // EXTI15
@@ -136,8 +149,11 @@ async fn main(spawner: Spawner) {
         Output::new(p.PB5.degrade(), Level::Low, Speed::Low), // VIRT1_STR
         &ASYNC_INPUT_EVENT_CH,
         &COMMON_TIMING,
-    );
+    ));
+    host_2p.start_tasks(&spawner);
+    info!("Game IO PCB side player 2 module loaded");
 
+    // DIP switch module initialization
     let _dipsw = DipSwitch::new(
         Input::new(p.PC6, Pull::Up),  // DIPSW0
         Input::new(p.PA12, Pull::Up), // DIPSW1
@@ -147,11 +163,13 @@ async fn main(spawner: Spawner) {
         Input::new(p.PB12, Pull::Up), // DIPSW5
     );
 
+    // LED0 indicator inside of PCB initialization. for debug / indication.
     let led0 = make_static!(BufferedOpenDrain::new(
         Output::new(p.PA4.degrade(), Level::High, Speed::Low),
         &COMMON_LED_TIMING,
     )); // INDICATE0
 
+    // LED1 indicator inside of PCB initialization. for debug / indication.
     let led1 = make_static!(BufferedOpenDrain::new(
         Output::new(p.PA5.degrade(), Level::High, Speed::Low),
         &COMMON_LED_TIMING,

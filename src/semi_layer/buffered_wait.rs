@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
+use core::cell::UnsafeCell;
+
 use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::AnyPin;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
@@ -72,19 +74,20 @@ impl From<InputEventKind> for TinyInputEventKind {
 
 /// Internal PullUp + 4050 + OpenDrain outside (NMOS or ULN2803)
 pub struct BufferedWait {
-    wait: ExtiInput<'static, AnyPin>,
+    wait: UnsafeCell<ExtiInput<'static, AnyPin>>,
     port: InputPortKind,
     channel: &'static InputEventChannel,
 }
 
+#[allow(unused)]
 impl BufferedWait {
     pub const fn new(
         wait: ExtiInput<'static, AnyPin>,
         port: InputPortKind,
         channel: &'static InputEventChannel,
     ) -> BufferedWait {
-        BufferedWait {
-            wait,
+        Self {
+            wait: UnsafeCell::new(wait),
             port,
             channel,
         }
@@ -99,18 +102,19 @@ impl BufferedWait {
             .await;
     }
 
-    pub async fn run(&mut self) -> ! {
+    pub async fn run(&self) -> ! {
         // wait high for fit ot initial state.
-        self.wait.wait_for_high().await;
+        let wait = unsafe { &mut *self.wait.get() };
+        wait.wait_for_high().await;
 
         loop {
             // detect low signal (active low)
-            self.wait.wait_for_low().await;
+            wait.wait_for_low().await;
             let entered_time = Instant::now();
             self.send(InputEventKind::Pressed).await;
 
             // detect high signal (active high)
-            self.wait.wait_for_high().await;
+            wait.wait_for_high().await;
             match ((Instant::now() - entered_time)
                 .as_millis()
                 .min(TINY_LONG_PRESS_MAX as u64 * 10)
@@ -128,7 +132,8 @@ impl BufferedWait {
 
 // in HW v0.2 pool usage would be 6.
 // PCB use 6 EXTI
-#[embassy_executor::task(pool_size = 16)]
-pub async fn buffered_wait_spawn(instance: &'static mut BufferedWait) {
+// single task pool consume 88 bytes
+#[embassy_executor::task(pool_size = 6)]
+pub async fn buffered_wait_spawn(instance: &'static BufferedWait) {
     instance.run().await
 }

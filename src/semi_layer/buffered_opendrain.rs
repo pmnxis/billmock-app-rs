@@ -230,6 +230,7 @@ pub struct BufferedOpenDrain {
     channel_hsm: OpenDrainRequestChannel,
 }
 
+#[allow(unused)]
 impl BufferedOpenDrain {
     fn reflect_on_io(&self, hsm: &MicroHsm) {
         let io = unsafe { &mut *self.io.get() };
@@ -351,7 +352,8 @@ impl BufferedOpenDrain {
 
 // in HW v0.2 pool usage would be 13.
 // PCB has 13 N-MOS open-drain.
-#[embassy_executor::task(pool_size = 16)]
+// single task pool consume 112 bytes
+#[embassy_executor::task(pool_size = 13)]
 pub async fn buffered_opendrain_spawn(instance: &'static BufferedOpenDrain) {
     instance.run().await
 }
