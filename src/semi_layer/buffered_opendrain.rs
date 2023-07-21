@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
+use core::cell::UnsafeCell;
+
 use embassy_stm32::gpio::{AnyPin, Output};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
@@ -13,9 +15,9 @@ use super::timing::{DualPoleToggleTiming, ToggleTiming};
 
 pub const HOST_SIDE_INTERFACE_CH_SIZE: usize = 2;
 pub type OpenDrainRequestChannel =
-    Channel<ThreadModeRawMutex, MicroHsm, HOST_SIDE_INTERFACE_CH_SIZE>;
+    Channel<ThreadModeRawMutex, BufferedOpenDrainRequest, HOST_SIDE_INTERFACE_CH_SIZE>;
 
-pub struct NanoFsm {
+struct NanoFsm {
     /// Given or left toggle number
     /// Mean number of cycle of `High` and `Low` combination
     toggle_count: u8,
@@ -95,7 +97,24 @@ impl BlinkFsm {
     }
 }
 
-pub enum MicroHsm {
+pub enum BufferedOpenDrainRequest {
+    /// Set low
+    SetLow,
+    /// Set high
+    SetHigh,
+    /// Set high and low with shared configuration
+    TickTock(u8),
+    /// Set high and low with alternative means secondary shared configuration.
+    /// secondary shared configuration is to saving compute resource and RAM usage.
+    AltTickTock(u8),
+    /// Forever blink until not cancel
+    ForeverBlink,
+    /// Forever blink until not cancel with alternative configuartion
+    /// secondary shared configuration is to saving compute resource and RAM usage.
+    AltForeverBlink,
+}
+
+enum MicroHsm {
     /// Set low
     SetLow,
     /// Set high
@@ -116,6 +135,46 @@ impl MicroHsm {
     /// Default init is `SetLow`
     pub const fn default() -> Self {
         Self::SetLow
+    }
+}
+
+impl From<MicroHsm> for BufferedOpenDrainRequest {
+    fn from(value: MicroHsm) -> Self {
+        match value {
+            MicroHsm::SetLow => Self::SetLow,
+            MicroHsm::SetHigh => Self::SetHigh,
+            MicroHsm::TickTock(x) => Self::TickTock(x.toggle_count),
+            MicroHsm::AltTickTock(x) => Self::AltTickTock(x.toggle_count),
+            MicroHsm::ForeverBlink(_) => Self::ForeverBlink,
+            MicroHsm::AltForeverBlink(_) => Self::AltForeverBlink,
+        }
+    }
+}
+
+impl From<(BufferedOpenDrainRequest, &'static DualPoleToggleTiming)> for MicroHsm {
+    fn from((req, timing): (BufferedOpenDrainRequest, &'static DualPoleToggleTiming)) -> Self {
+        match req {
+            BufferedOpenDrainRequest::SetLow => Self::SetLow,
+            BufferedOpenDrainRequest::SetHigh => Self::SetHigh,
+            BufferedOpenDrainRequest::TickTock(x) => Self::TickTock(NanoFsm {
+                toggle_count: x,
+                state: true,
+                duration: timing.shared.get().high_ms,
+            }),
+            BufferedOpenDrainRequest::AltTickTock(x) => Self::AltTickTock(NanoFsm {
+                toggle_count: x,
+                state: true,
+                duration: timing.alt.high_ms,
+            }),
+            BufferedOpenDrainRequest::ForeverBlink => Self::ForeverBlink(BlinkFsm {
+                state: true,
+                duration: timing.shared.get().high_ms,
+            }),
+            BufferedOpenDrainRequest::AltForeverBlink => Self::AltForeverBlink(BlinkFsm {
+                state: true,
+                duration: timing.alt.high_ms,
+            }),
+        }
     }
 }
 
@@ -166,42 +225,40 @@ impl MicroHsm {
 }
 
 pub struct BufferedOpenDrain {
-    io: Output<'static, AnyPin>,
+    io: UnsafeCell<Output<'static, AnyPin>>,
     timing: &'static DualPoleToggleTiming,
     channel_hsm: OpenDrainRequestChannel,
-    hsm: MicroHsm,
 }
 
 impl BufferedOpenDrain {
-    pub fn reflect_on_io(&mut self) {
-        match self.hsm.expect_output_pin_state() {
-            false => self.io.set_low(),
-            true => self.io.set_high(),
+    fn reflect_on_io(&self, hsm: &MicroHsm) {
+        let io = unsafe { &mut *self.io.get() };
+
+        match hsm.expect_output_pin_state() {
+            false => io.set_low(),
+            true => io.set_high(),
         };
     }
 
-    pub fn next_sched_time(&self) -> Option<u16> {
-        self.hsm.next_sched_time()
-    }
-
     pub const fn new(
-        mut out_pin: Output<'static, AnyPin>,
+        out_pin: Output<'static, AnyPin>,
         timing: &'static DualPoleToggleTiming,
     ) -> Self {
         Self {
-            io: out_pin,
+            io: UnsafeCell::new(out_pin),
             timing,
             channel_hsm: Channel::new(),
-            hsm: MicroHsm::default(),
         }
     }
 
-    pub async fn run(&mut self) {
-        self.reflect_on_io();
+    async fn run(&self) {
+        let mut hsm = MicroHsm::default();
+        self.reflect_on_io(&hsm);
+
         let mut last = Instant::now();
 
         loop {
-            let request = match (self.next_sched_time(), self.hsm.is_busy()) {
+            let request = match (hsm.next_sched_time(), hsm.is_busy()) {
                 (Some(wait_ms), false) => {
                     with_timeout(
                         Duration::from_millis(wait_ms.into()),
@@ -217,12 +274,12 @@ impl BufferedOpenDrain {
                 }
                 (None, true) => {
                     // this would be happend rarely
-                    self.reflect_on_io();
+                    self.reflect_on_io(&hsm);
 
                     let elapsed = (Instant::now() - last).as_millis().min(u16::MAX.into()) as u16;
 
-                    self.hsm = self.hsm.next(self.timing, elapsed);
-                    self.reflect_on_io();
+                    hsm = hsm.next(self.timing, elapsed);
+                    self.reflect_on_io(&hsm);
 
                     continue;
                 }
@@ -231,23 +288,70 @@ impl BufferedOpenDrain {
             match request {
                 Ok(received) => {
                     // replace slot
-                    self.hsm = received;
+                    hsm = (received, self.timing).into();
                 }
                 Err(_) => {
                     let elapsed = (Instant::now() - last).as_millis().min(u16::MAX.into()) as u16;
-                    self.hsm = self.hsm.next(self.timing, elapsed);
+                    hsm = hsm.next(self.timing, elapsed);
                 }
             }
 
-            self.reflect_on_io();
+            self.reflect_on_io(&hsm);
             last = Instant::now();
         }
+    }
+
+    pub async fn request(&self, request: BufferedOpenDrainRequest) {
+        self.channel_hsm.send(request).await
+    }
+
+    pub async fn try_request(&self, request: BufferedOpenDrainRequest) -> Result<(), ()> {
+        self.channel_hsm
+            .try_send(request)
+            .map_or(Err(()), |_| Ok(()))
+    }
+
+    /// Simply order set high on the opendrain module, but doesn't wait for being reflected.
+    pub async fn set_high(&self) {
+        self.request(BufferedOpenDrainRequest::SetHigh).await
+    }
+
+    /// Simply order set low on the opendrain module, but doesn't wait for being reflected.
+    pub async fn set_low(&self) {
+        self.request(BufferedOpenDrainRequest::SetLow).await
+    }
+
+    /// Simply order tick tock (high/low with shared duration configuration) on the opendrain module.
+    /// Not wait for being reflected and wait for sending queue.
+    pub async fn tick_tock(&self, count: u8) {
+        self.request(BufferedOpenDrainRequest::TickTock(count))
+            .await
+    }
+
+    /// Simply order tick tock (high/low with alt duration configuration) on the opendrain module.
+    /// Not wait for being reflected and wait for sending queue.
+    pub async fn alt_tick_tock(&self, count: u8) {
+        self.request(BufferedOpenDrainRequest::AltTickTock(count))
+            .await
+    }
+
+    /// Simply order blink forever (high/low with shared duration configuration) on the opendrain module.
+    /// Not wait for being reflected and wait for sending queue.
+    pub async fn forever_blink(&self) {
+        self.request(BufferedOpenDrainRequest::ForeverBlink).await
+    }
+
+    /// Simply order blink forever (high/low with alt duration configuration) on the opendrain module.
+    /// Not wait for being reflected and wait for sending queue.
+    pub async fn alt_forever_blink(&self) {
+        self.request(BufferedOpenDrainRequest::AltForeverBlink)
+            .await
     }
 }
 
 // in HW v0.2 pool usage would be 13.
 // PCB has 13 N-MOS open-drain.
 #[embassy_executor::task(pool_size = 16)]
-pub async fn buffered_opendrain_spawn(instance: &'static mut BufferedOpenDrain) {
+pub async fn buffered_opendrain_spawn(instance: &'static BufferedOpenDrain) {
     instance.run().await
 }

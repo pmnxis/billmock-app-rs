@@ -20,6 +20,7 @@ use embassy_stm32::peripherals::*;
 use embassy_stm32::usart::{BufferedInterruptHandler, BufferedUart, Config as UartConfig};
 use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
+use embassy_time::{Duration, Timer};
 use semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
@@ -146,15 +147,18 @@ async fn main(spawner: Spawner) {
         Input::new(p.PB12, Pull::Up), // DIPSW5
     );
 
-    let mut led0 = make_static!(BufferedOpenDrain::new(
+    let led0 = make_static!(BufferedOpenDrain::new(
         Output::new(p.PA4.degrade(), Level::High, Speed::Low),
         &COMMON_LED_TIMING,
     )); // INDICATE0
 
-    let mut led1 = make_static!(BufferedOpenDrain::new(
+    let led1 = make_static!(BufferedOpenDrain::new(
         Output::new(p.PA5.degrade(), Level::High, Speed::Low),
         &COMMON_LED_TIMING,
     )); // INDICATE1
+
+    led0.alt_forever_blink().await;
+    led1.set_high().await;
 
     // temporary usart configuration
     let mut tx_buffer = [0u8; CARD_GADGET_TX_BUFFER_SIZE];
@@ -175,8 +179,14 @@ async fn main(spawner: Spawner) {
     unwrap!(spawner.spawn(buffered_opendrain_spawn(led1)));
 
     // usart2.write_all(b"Hello Embassy World!\r\n").await.unwrap();
-    info!("wrote Hello, starting echo");
-    let mut _buf = [0; CARD_GADGET_RX_BUFFER_SIZE];
+    // info!("wrote Hello, starting echo");
+    // let mut _buf = [0; CARD_GADGET_RX_BUFFER_SIZE];
 
-    loop {}
+    loop {
+        // Just example
+        Timer::after(Duration::from_millis(5_000)).await;
+        led0.forever_blink().await;
+        Timer::after(Duration::from_millis(1_000)).await;
+        led1.tick_tock(3).await;
+    }
 }
