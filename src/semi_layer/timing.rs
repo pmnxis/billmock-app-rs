@@ -40,10 +40,12 @@ impl SharedToggleTiming {
         }
     }
 
+    #[allow(dead_code)]
     pub fn set(&self, value: ToggleTiming) {
         unsafe { *self.0.get() = value };
     }
 
+    #[allow(dead_code)]
     pub fn get(&self) -> ToggleTiming {
         unsafe { *self.0.get().clone() }
     }

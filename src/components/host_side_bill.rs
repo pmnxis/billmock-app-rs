@@ -43,6 +43,14 @@ impl HostSideBill {
         }
     }
 
+    #[allow(dead_code)]
+    pub async fn set_bulk_signal_all(&self, busy: bool, vend: bool, jam: bool, start: bool) {
+        self.out_busy.set_level(busy).await;
+        self.out_vend.set_level(vend).await;
+        self.out_jam.set_level(jam).await;
+        self.out_start.set_level(start).await;
+    }
+
     pub fn start_tasks(&'static self, spawner: &Spawner) {
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.out_busy)));
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.out_vend)));

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-#![no_std]
 #![no_main]
+#![cfg_attr(not(test), no_std)]
 #![feature(type_alias_impl_trait)]
 
 mod components;
@@ -21,6 +21,7 @@ use embassy_stm32::usart::{BufferedInterruptHandler, BufferedUart, Config as Uar
 use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
+use embedded_io::asynch::{Read, Write}; // for usart
 use semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
@@ -175,6 +176,9 @@ async fn main(spawner: Spawner) {
         &COMMON_LED_TIMING,
     )); // INDICATE1
 
+    unwrap!(spawner.spawn(buffered_opendrain_spawn(led0)));
+    unwrap!(spawner.spawn(buffered_opendrain_spawn(led1)));
+
     led0.alt_forever_blink().await;
     led1.set_high().await;
 
@@ -193,10 +197,11 @@ async fn main(spawner: Spawner) {
         uart2_config,
     );
 
-    unwrap!(spawner.spawn(buffered_opendrain_spawn(led0)));
-    unwrap!(spawner.spawn(buffered_opendrain_spawn(led1)));
+    // let (mut card_tx, mut card_rx) = usart2.split();
+    // card_
 
     // usart2.write_all(b"Hello Embassy World!\r\n").await.unwrap();
+
     // info!("wrote Hello, starting echo");
     // let mut _buf = [0; CARD_GADGET_RX_BUFFER_SIZE];
 

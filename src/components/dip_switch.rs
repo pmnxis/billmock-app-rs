@@ -25,6 +25,7 @@ pub struct DipSwitch<
     gpios: (AnyPin0, AnyPin1, AnyPin2, AnyPin3, AnyPin4, AnyPin5),
 }
 
+#[allow(dead_code)]
 impl<
         AnyPin0: InputPin,
         AnyPin1: InputPin,

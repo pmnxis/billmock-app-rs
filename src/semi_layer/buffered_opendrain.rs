@@ -235,10 +235,7 @@ impl BufferedOpenDrain {
     fn reflect_on_io(&self, hsm: &MicroHsm) {
         let io = unsafe { &mut *self.io.get() };
 
-        match hsm.expect_output_pin_state() {
-            false => io.set_low(),
-            true => io.set_high(),
-        };
+        io.set_level(hsm.expect_output_pin_state().into());
     }
 
     pub const fn new(
@@ -320,6 +317,15 @@ impl BufferedOpenDrain {
     /// Simply order set low on the opendrain module, but doesn't wait for being reflected.
     pub async fn set_low(&self) {
         self.request(BufferedOpenDrainRequest::SetLow).await
+    }
+
+    /// Simply order set high or low opendrain module by boolean, but doesn't wait for being reflected.
+    pub async fn set_level(&self, state: bool) {
+        self.request(match state {
+            true => BufferedOpenDrainRequest::SetHigh,
+            false => BufferedOpenDrainRequest::SetLow,
+        })
+        .await
     }
 
     /// Simply order tick tock (high/low with shared duration configuration) on the opendrain module.
