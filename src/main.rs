@@ -17,17 +17,17 @@ use embassy_executor::Spawner;
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
 use embassy_stm32::peripherals::*;
-use embassy_stm32::usart::{BufferedInterruptHandler, BufferedUart, Config as UartConfig};
+use embassy_stm32::usart::{BufferedInterruptHandler, BufferedUart, Config as UsartConfig};
 use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
-use embedded_io::asynch::{Read, Write}; // for usart
 use semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
 use crate::components::dip_switch::DipSwitch;
 use crate::components::host_side_bill::HostSideBill;
+use crate::components::serial_device::{card_reader_device_spawn, CardReaderDevice};
 use crate::components::start_button::StartButton;
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_wait::{InputEventChannel, InputPortKind};
@@ -37,10 +37,7 @@ bind_interrupts!(struct Irqs {
     USART2 => BufferedInterruptHandler<peripherals::USART2>;
 });
 
-// Test queue stuff
-const CARD_GADGET_RX_BUFFER_SIZE: usize = 768; // most of packet is 320~330 bytes
-const CARD_GADGET_TX_BUFFER_SIZE: usize = 128; // most of pakcet is 6~12 bytes, but some uncommon command can be long
-
+// Common Input event channel
 static ASYNC_INPUT_EVENT_CH: InputEventChannel = Channel::new();
 
 // Open-drain signal timing that shared or const-ish
@@ -163,6 +160,7 @@ async fn main(spawner: Spawner) {
         Input::new(p.PB13, Pull::Up), // DIPSW4
         Input::new(p.PB12, Pull::Up), // DIPSW5
     );
+    info!("DIP switch module loaded");
 
     // LED0 indicator inside of PCB initialization. for debug / indication.
     let led0 = make_static!(BufferedOpenDrain::new(
@@ -175,35 +173,28 @@ async fn main(spawner: Spawner) {
         Output::new(p.PA5.degrade(), Level::High, Speed::Low),
         &COMMON_LED_TIMING,
     )); // INDICATE1
-
     unwrap!(spawner.spawn(buffered_opendrain_spawn(led0)));
     unwrap!(spawner.spawn(buffered_opendrain_spawn(led1)));
+    info!("Debug LEDs module loaded");
 
     led0.alt_forever_blink().await;
     led1.set_high().await;
 
-    // temporary usart configuration
-    let mut tx_buffer = [0u8; CARD_GADGET_TX_BUFFER_SIZE];
-    let mut rx_buffer = [0u8; CARD_GADGET_RX_BUFFER_SIZE];
-    let uart2_config = UartConfig::default();
-
-    let mut _usart2: BufferedUart<'_, USART2> = BufferedUart::new(
+    // USART2 initialization for CardReaderDevice
+    let usart2_tx_buf = make_static!([0u8; components::serial_device::CARD_READER_TX_BUFFER_SIZE]);
+    let usart2_rx_buf = make_static!([0u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE]);
+    let usart2: BufferedUart<'_, USART2> = BufferedUart::new(
         p.USART2,
         Irqs,
         p.PA3, // R_RXD
         p.PA2, // T_RXD
-        &mut tx_buffer,
-        &mut rx_buffer,
-        uart2_config,
+        usart2_tx_buf,
+        usart2_rx_buf,
+        UsartConfig::default(), // default config is profer 115200 baud
     );
-
-    // let (mut card_tx, mut card_rx) = usart2.split();
-    // card_
-
-    // usart2.write_all(b"Hello Embassy World!\r\n").await.unwrap();
-
-    // info!("wrote Hello, starting echo");
-    // let mut _buf = [0; CARD_GADGET_RX_BUFFER_SIZE];
+    let card_reader = make_static!(CardReaderDevice::new(usart2));
+    unwrap!(spawner.spawn(card_reader_device_spawn(card_reader)));
+    info!("Credit card reader module loaded");
 
     loop {
         // Just example
