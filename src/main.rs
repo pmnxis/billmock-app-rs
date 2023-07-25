@@ -16,8 +16,8 @@ use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
-use embassy_stm32::peripherals::*;
-use embassy_stm32::usart::{BufferedInterruptHandler, BufferedUart, Config as UsartConfig};
+use embassy_stm32::usart::{Config as UsartConfig, Uart};
+use embassy_stm32::Config as Stm32Config;
 use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
@@ -34,7 +34,7 @@ use crate::semi_layer::buffered_wait::{InputEventChannel, InputPortKind};
 use crate::semi_layer::timing::{DualPoleToggleTiming, SharedToggleTiming, ToggleTiming};
 
 bind_interrupts!(struct Irqs {
-    USART2 => BufferedInterruptHandler<peripherals::USART2>;
+    USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
 });
 
 // Common Input event channel
@@ -67,7 +67,21 @@ static COMMON_LED_TIMING: DualPoleToggleTiming =
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    let p = embassy_stm32::init(Default::default());
+    let stm32_config = {
+        let mut ret = Stm32Config::default();
+        ret.rcc.mux = embassy_stm32::rcc::ClockSrc::PLL(embassy_stm32::rcc::PllConfig {
+            source: embassy_stm32::rcc::PllSrc::HSI16,
+            m: embassy_stm32::rcc::Pllm::Div1,
+            n: 8,
+            r: embassy_stm32::rcc::Pllr::Div2,
+            q: None,
+            p: None,
+        });
+
+        ret
+    };
+    // stm32_config.rcc. = Some(Hertz(32_000_000));
+    let p = embassy_stm32::init(stm32_config);
     info!("billmock-app-rs starting...");
 
     // Vend legacy device initialization
@@ -152,6 +166,7 @@ async fn main(spawner: Spawner) {
     info!("Game IO PCB side player 2 module loaded");
 
     // DIP switch module initialization
+    // todo! - dip switch gives event when new changes status keep some time.
     let _dipsw = DipSwitch::new(
         Input::new(p.PC6, Pull::Up),  // DIPSW0
         Input::new(p.PA12, Pull::Up), // DIPSW1
@@ -181,26 +196,40 @@ async fn main(spawner: Spawner) {
     led1.set_high().await;
 
     // USART2 initialization for CardReaderDevice
-    let usart2_tx_buf = make_static!([0u8; components::serial_device::CARD_READER_TX_BUFFER_SIZE]);
     let usart2_rx_buf = make_static!([0u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE]);
-    let usart2: BufferedUart<'_, USART2> = BufferedUart::new(
-        p.USART2,
-        Irqs,
-        p.PA3, // R_RXD
-        p.PA2, // T_RXD
-        usart2_tx_buf,
-        usart2_rx_buf,
-        UsartConfig::default(), // default config is profer 115200 baud
-    );
-    let card_reader = make_static!(CardReaderDevice::new(usart2));
+
+    let usart2_config = {
+        let mut ret = UsartConfig::default();
+        ret.baudrate = 115200;
+        ret.assume_noise_free = false;
+        ret
+    };
+
+    let (usart2_tx, usart2_rx) = {
+        let (tx, rx) = Uart::new(
+            p.USART2,
+            p.PA3,
+            p.PA2,
+            Irqs,
+            p.DMA1_CH2,
+            p.DMA1_CH1,
+            usart2_config,
+        )
+        .split();
+        (tx, rx.into_ring_buffered(usart2_rx_buf))
+    };
+
+    let card_reader = make_static!(CardReaderDevice::new(usart2_tx, usart2_rx));
     unwrap!(spawner.spawn(card_reader_device_spawn(card_reader)));
     info!("Credit card reader module loaded");
 
+    info!("All module loaded, welcome business logic");
+
     loop {
-        // Just example
+        // write event based business logic here.
         Timer::after(Duration::from_millis(5_000)).await;
-        led0.forever_blink().await;
-        Timer::after(Duration::from_millis(1_000)).await;
+        led0.alt_tick_tock(2).await;
+        Timer::after(Duration::from_millis(5_000)).await;
         led1.tick_tock(3).await;
     }
 }
