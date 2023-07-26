@@ -40,8 +40,8 @@ pub enum InputEventKind {
 }
 
 pub struct InputEvent {
-    port: InputPortKind,
-    kind: TinyInputEventKind,
+    pub port: InputPortKind,
+    pub kind: TinyInputEventKind,
 }
 
 pub type InputEventChannel = Channel<ThreadModeRawMutex, InputEvent, MPSC_WAIT_INPUT_EVENT_CH_SIZE>;

@@ -21,7 +21,6 @@ use embassy_stm32::Config as Stm32Config;
 use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
-use semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -30,7 +29,8 @@ use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::{card_reader_device_spawn, CardReaderDevice};
 use crate::components::start_button::StartButton;
 use crate::components::vend_side_bill::VendSideBill;
-use crate::semi_layer::buffered_wait::{InputEventChannel, InputPortKind};
+use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
+use crate::semi_layer::buffered_wait::{InputEventChannel, InputEventKind, InputPortKind};
 use crate::semi_layer::timing::{DualPoleToggleTiming, SharedToggleTiming, ToggleTiming};
 
 bind_interrupts!(struct Irqs {
@@ -227,6 +227,64 @@ async fn main(spawner: Spawner) {
 
     loop {
         // write event based business logic here.
+
+        match card_reader
+            .channel
+            .try_recv()
+            .map_or(None, |x| x.coin_count())
+        {
+            Some((c, d)) => {
+                match d % 10 != 2 {
+                    true => &host_1p,
+                    false => &host_2p,
+                }
+                .out_vend
+                .tick_tock(c)
+                .await;
+            }
+            None => {}
+        }
+
+        match ASYNC_INPUT_EVENT_CH.try_recv().ok() {
+            Some(event) => match (event.port, InputEventKind::from(event.kind)) {
+                (InputPortKind::Start1P, InputEventKind::Pressed) => {
+                    host_1p.out_start.set_high().await;
+                }
+                (InputPortKind::Start1P, InputEventKind::Released) => {
+                    host_1p.out_start.set_low().await;
+                }
+                (InputPortKind::Start2P, InputEventKind::Pressed) => {
+                    host_2p.out_start.set_high().await;
+                }
+                (InputPortKind::Start2P, InputEventKind::Released) => {
+                    host_2p.out_start.set_low().await;
+                }
+                (InputPortKind::Inhibit1, InputEventKind::Pressed) => {
+                    vend_legacy.out_inhibit.set_high().await;
+                }
+                (InputPortKind::Inhibit1, InputEventKind::Released) => {
+                    vend_legacy.out_inhibit.set_low().await;
+                }
+                (InputPortKind::Vend, InputEventKind::LongPressed(duration_10ms)) => {
+                    if duration_10ms > 3 {
+                        // this is proof of concept, doesn't cover all start1p/2p complex selection
+                        host_1p.out_vend.tick_tock(1).await;
+                    }
+                }
+                // not implement JAM side
+                _ => {}
+            },
+            None => {}
+        }
+
+        // match card_reader.channel.try_recv() {
+        //     Some(x) {
+        //         if x.coin_cnt() {
+
+        //         }
+        //     }
+        //     None {}
+        // }
         Timer::after(Duration::from_millis(5_000)).await;
         led0.alt_tick_tock(2).await;
         Timer::after(Duration::from_millis(5_000)).await;

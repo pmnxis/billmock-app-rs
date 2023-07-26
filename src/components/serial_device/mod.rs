@@ -29,7 +29,7 @@ pub struct CardReaderDevice {
     // USART is complex to use generic
     tx: UnsafeCell<UartTx<'static, USART2, DMA1_CH2>>,
     rx: UnsafeCell<RingBufferedUartRx<'static, USART2, DMA1_CH1>>, // USART is complex to use generic
-    channel: CardReaderCommandChannel,
+    pub channel: CardReaderCommandChannel,
 }
 
 impl CardReaderDevice {

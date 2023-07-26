@@ -17,10 +17,10 @@ use crate::semi_layer::timing::DualPoleToggleTiming;
 
 pub struct HostSideBill {
     in_inhibit: BufferedWait,
-    out_busy: BufferedOpenDrain,
-    out_vend: BufferedOpenDrain,
-    out_jam: BufferedOpenDrain,
-    out_start: BufferedOpenDrain,
+    pub out_busy: BufferedOpenDrain,
+    pub out_vend: BufferedOpenDrain,
+    pub out_jam: BufferedOpenDrain,
+    pub out_start: BufferedOpenDrain,
 }
 
 impl HostSideBill {
