@@ -51,12 +51,12 @@ const TINY_LONG_PRESS_MAX: u8 = (0x1 << 7) - 1;
 
 impl From<TinyInputEventKind> for InputEventKind {
     fn from(value: TinyInputEventKind) -> Self {
-        if value & (0x1 << 7) != 0 {
+        if value == 0 {
             return Self::Released;
         } else {
-            match value & 0b01111111 {
-                0 => Self::Pressed,
-                x => Self::LongPressed(x),
+            match value {
+                0b1000_0000 => Self::Pressed,
+                x => Self::LongPressed(x & 0b0111_1111),
             }
         }
     }

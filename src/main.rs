@@ -246,48 +246,54 @@ async fn main(spawner: Spawner) {
         }
 
         match ASYNC_INPUT_EVENT_CH.try_recv().ok() {
-            Some(event) => match (event.port, InputEventKind::from(event.kind)) {
-                (InputPortKind::Start1P, InputEventKind::Pressed) => {
-                    host_1p.out_start.set_high().await;
-                }
-                (InputPortKind::Start1P, InputEventKind::Released) => {
-                    host_1p.out_start.set_low().await;
-                }
-                (InputPortKind::Start2P, InputEventKind::Pressed) => {
-                    host_2p.out_start.set_high().await;
-                }
-                (InputPortKind::Start2P, InputEventKind::Released) => {
-                    host_2p.out_start.set_low().await;
-                }
-                (InputPortKind::Inhibit1, InputEventKind::Pressed) => {
-                    vend_legacy.out_inhibit.set_high().await;
-                }
-                (InputPortKind::Inhibit1, InputEventKind::Released) => {
-                    vend_legacy.out_inhibit.set_low().await;
-                }
-                (InputPortKind::Vend, InputEventKind::LongPressed(duration_10ms)) => {
-                    if duration_10ms > 3 {
-                        // this is proof of concept, doesn't cover all start1p/2p complex selection
-                        host_1p.out_vend.tick_tock(1).await;
+            Some(event) => {
+                // info!("EVENT comes - port:{}, kind:{}", event.port, event.kind);
+                info!("Some event comes");
+                match (event.port, InputEventKind::from(event.kind)) {
+                    (InputPortKind::Start1P, InputEventKind::Pressed) => {
+                        info!("Start1P Pressed");
+                        host_1p.out_start.set_high().await;
                     }
+                    (InputPortKind::Start1P, InputEventKind::Released) => {
+                        info!("Start1P Released");
+                        host_1p.out_start.set_low().await;
+                    }
+                    (InputPortKind::Start2P, InputEventKind::Pressed) => {
+                        info!("Start2P Pressed");
+                        host_2p.out_start.set_high().await;
+                    }
+                    (InputPortKind::Start2P, InputEventKind::Released) => {
+                        info!("Start2P Released");
+                        host_2p.out_start.set_low().await;
+                    }
+                    (InputPortKind::Inhibit1, InputEventKind::Pressed) => {
+                        vend_legacy.out_inhibit.set_high().await;
+                    }
+                    (InputPortKind::Inhibit1, InputEventKind::Released) => {
+                        vend_legacy.out_inhibit.set_low().await;
+                    }
+                    (InputPortKind::Vend, InputEventKind::LongPressed(duration_10ms)) => {
+                        if duration_10ms > 1 {
+                            info!("Vend LongPressed");
+
+                            // this is proof of concept, doesn't cover all start1p/2p complex selection
+                            host_1p.out_vend.tick_tock(1).await;
+                        }
+                    }
+                    (InputPortKind::Vend, InputEventKind::Pressed) => {
+                        info!("Vend Pressed")
+                    }
+                    (InputPortKind::Vend, InputEventKind::Released) => {
+                        info!("Vend Released")
+                    }
+                    // not implement JAM side
+                    _ => {}
                 }
-                // not implement JAM side
-                _ => {}
-            },
+            }
             None => {}
         }
 
-        // match card_reader.channel.try_recv() {
-        //     Some(x) {
-        //         if x.coin_cnt() {
-
-        //         }
-        //     }
-        //     None {}
-        // }
-        Timer::after(Duration::from_millis(5_000)).await;
-        led0.alt_tick_tock(2).await;
-        Timer::after(Duration::from_millis(5_000)).await;
-        led1.tick_tock(3).await;
+        // return preemption on exeucutor, there should be better method.
+        Timer::after(Duration::from_millis(100)).await;
     }
 }
