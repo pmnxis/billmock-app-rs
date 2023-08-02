@@ -5,7 +5,7 @@
  */
 
 #![no_main]
-#![cfg_attr(not(test), no_std)]
+#![no_std]
 #![feature(type_alias_impl_trait)]
 
 mod components;
@@ -297,3 +297,6 @@ async fn main(spawner: Spawner) {
         Timer::after(Duration::from_millis(100)).await;
     }
 }
+
+#[cfg(test)]
+mod tests {}
