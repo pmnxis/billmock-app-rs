@@ -78,15 +78,17 @@ pub enum SerialArcadeError {
     InvalidFrame,
 }
 
-pub trait SerialArcadePay<SerialArcadeSpec: Sized + Clone + PartialEq + defmt::Format>:
-    Sized
-{
+/// Common generic serial type payment method interface
+pub trait SerialArcadePay: Sized + Clone + PartialEq + defmt::Format {
+    /// parse rx buf and return degraded data and varient info(Self)
     fn parse_rx(
         raw_data: &[u8],
         raw_len: usize,
-    ) -> Result<(GenericPaymentRecv, SerialArcadeSpec), SerialArcadeError>;
+    ) -> Result<(GenericPaymentRecv, Self), SerialArcadeError>;
 
+    /// generate tx buf data by request and varient info(Self)
     fn generate_tx(
+        &self,
         request: GenericPaymentRequest,
         tx_buffer: &mut [u8],
     ) -> Result<usize, SerialArcadeError>;

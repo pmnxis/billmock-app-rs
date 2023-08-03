@@ -12,7 +12,7 @@ description = "application side of billmock hardware, powered by rust-embedded"
 
 [features]
 default = []
-nda-feature = []
+nda-feature = ["billmock-ed785-lib"]
 
 [dependencies]
 embassy-sync = { version = "0.2.0", git = "https://github.com/embassy-rs/embassy.git", rev = "4d1d125f4157084668a949f9bc24e4417628f9fe", features = ["defmt"] }
@@ -36,6 +36,9 @@ num_enum = { version = "0.6.1", default-features = false } # Application specifi
 
 # Application specific library
 serial-arcade-pay = { path = "serial-arcade-pay" }
+# NDA, PRIVATE REPO.
+# Apply this later : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+billmock-ed785-lib = { path = "../billmock-ed785-lib", optional = true }
 
 [profile.release]
 # or "z"

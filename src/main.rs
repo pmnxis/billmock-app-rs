@@ -21,6 +21,7 @@ use embassy_stm32::Config as Stm32Config;
 use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
+use serial_arcade_pay::{GenericIncomeInfo, GenericPaymentRecv};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -228,21 +229,23 @@ async fn main(spawner: Spawner) {
     loop {
         // write event based business logic here.
 
-        match card_reader
-            .channel
-            .try_recv()
-            .map_or(None, |x| x.coin_count())
-        {
-            Some((c, d)) => {
+        match card_reader.channel.try_recv().ok() {
+            Some(GenericPaymentRecv::Income(GenericIncomeInfo {
+                player: None,
+                price: None,
+                signal_count: Some(c),
+                pulse_duration: Some(d),
+            })) => {
                 match d % 10 != 2 {
                     true => &host_1p,
                     false => &host_2p,
                 }
                 .out_vend
-                .tick_tock(c)
+                .tick_tock(c.min(u8::MAX.into()) as u8)
                 .await;
             }
             None => {}
+            _ => {}
         }
 
         match ASYNC_INPUT_EVENT_CH.try_recv().ok() {
