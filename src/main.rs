@@ -244,6 +244,22 @@ async fn main(spawner: Spawner) {
                 .tick_tock(c.min(u8::MAX.into()) as u8)
                 .await;
             }
+            Some(GenericPaymentRecv::Income(GenericIncomeInfo {
+                player: Some(p),
+                price: _,
+                // price: Some(_r),
+                signal_count: Some(c),
+                pulse_duration: _,
+                // pulse_duration: Some(_d),
+            })) => {
+                match p {
+                    2 => &host_2p,
+                    _ => &host_1p,
+                }
+                .out_vend
+                .tick_tock(c.min(u8::MAX.into()) as u8)
+                .await;
+            }
             None => {}
             _ => {}
         }
