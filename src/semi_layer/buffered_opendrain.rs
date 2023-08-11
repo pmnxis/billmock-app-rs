@@ -41,7 +41,7 @@ impl NanoFsm {
                 duration: self.duration - elapsed,
             }),
             false => match (self.toggle_count, self.state) {
-                (0, false) => Err(()),
+                (0, _) | (1, false) => Err(()),
                 (toggle_count, true) => Ok(NanoFsm {
                     toggle_count,
                     state: false,
