@@ -12,7 +12,6 @@ description = "application side of billmock hardware, powered by rust-embedded"
 
 [features]
 default = []
-nda-feature = ["billmock-ed785-lib"]
 
 [dependencies]
 embassy-sync = { version = "0.2.0", git = "https://github.com/embassy-rs/embassy.git", rev = "4d1d125f4157084668a949f9bc24e4417628f9fe", features = ["defmt"] }
@@ -32,13 +31,13 @@ panic-probe = { version = "0.3", features = ["print-defmt"] }
 futures = { version = "0.3.17", default-features = false, features = ["async-await"] }
 heapless = { version = "0.7.16", default-features = false } # 0.7.5 original
 static_cell = { version = "1.2", features = ["nightly"] }
-num_enum = { version = "0.6.1", default-features = false } # Application specific import (only `no_std` crates alllowed)
+num_enum = { version = "0.7.0", default-features = false } # Application specific import (only `no_std` crates alllowed)
 
 # Application specific library
 serial-arcade-pay = { path = "serial-arcade-pay" }
-# NDA, PRIVATE REPO.
-# Apply this later : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-billmock-ed785-lib = { path = "../billmock-ed785-lib", optional = true }
+# `serial-arcade-pay-impl` would be replaced to NDA library that working on real field with dependency injection
+# details : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
+serial-arcade-pay-impl = { path = "../billmock-ed785-lib" }
 
 [profile.release]
 # or "z"

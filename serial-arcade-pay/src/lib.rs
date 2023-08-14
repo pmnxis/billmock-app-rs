@@ -73,6 +73,10 @@ impl TinyGenericInhibitInfo {
     pub fn new(p1: bool, p2: bool, p3: bool, p4: bool) -> Self {
         Self::const_new(p1, p2, p3, p4)
     }
+
+    pub fn new_from_u8(value: u8) -> Self {
+        Self(value)
+    }
 }
 
 impl Default for TinyGenericInhibitInfo {
@@ -133,6 +137,8 @@ pub enum SerialArcadeError {
     InvalidFrame,
     /// There is no request for the spec or not implemented
     VarientNotSupportRequest,
+    /// Wrong src, suggest to check RX/TX are shorted.
+    WrongSource,
 }
 
 /// Common generic serial type payment method interface
@@ -149,4 +155,7 @@ pub trait SerialArcadePay: Sized + Clone + PartialEq + defmt::Format {
         request: &GenericPaymentRequest,
         tx_buffer: &mut [u8],
     ) -> Result<usize, SerialArcadeError>;
+
+    /// tell it's NDA or not, this feature is required for depenency injection
+    fn is_nda() -> bool;
 }

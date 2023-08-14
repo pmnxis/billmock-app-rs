@@ -27,7 +27,7 @@ use {defmt_rtt as _, panic_probe as _};
 
 use crate::components::dip_switch::DipSwitch;
 use crate::components::host_side_bill::HostSideBill;
-use crate::components::serial_device::{card_reader_device_spawn, CardReaderDevice};
+use crate::components::serial_device::{self, card_reader_device_spawn, CardReaderDevice};
 use crate::components::start_button::StartButton;
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
@@ -222,6 +222,9 @@ async fn main(spawner: Spawner) {
 
     let card_reader = make_static!(CardReaderDevice::new(usart2_tx, usart2_rx));
     unwrap!(spawner.spawn(card_reader_device_spawn(card_reader)));
+
+    serial_device::alert_module_status();
+
     info!("Credit card reader module loaded");
 
     info!("All module loaded, welcome business logic");

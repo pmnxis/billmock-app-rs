@@ -6,13 +6,13 @@
 
 use core::cell::UnsafeCell;
 
-use billmock_ed785_lib::KiccEd785Varient as CommSpecVarient;
 use embassy_stm32::peripherals::USART2;
 use embassy_stm32::peripherals::{DMA1_CH1, DMA1_CH2};
 use embassy_stm32::usart::{RingBufferedUartRx, UartTx};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use serial_arcade_pay::*;
+use serial_arcade_pay_impl::SerialPayVarient;
 
 const CARD_READER_COMMAND_CHANNEL_SIZE: usize = 8;
 
@@ -42,7 +42,7 @@ impl CardReaderDevice {
     }
 
     pub async fn run(&self) {
-        let mut current_varient: Option<CommSpecVarient> = None;
+        let mut _current_varient: Option<SerialPayVarient> = None;
 
         let rx = unsafe { &mut *self.rx.get() };
         let _tx = unsafe { &mut *self.tx.get() };
@@ -57,11 +57,11 @@ impl CardReaderDevice {
                     defmt::debug!("UART READ {}: {:02X}", rx_len, &cutted_rx_buf);
                     // end of debug
 
-                    match CommSpecVarient::parse_rx(&rx_buf, rx_len) {
+                    match SerialPayVarient::parse_rx(&rx_buf, rx_len) {
                         Ok((resp, varient)) => {
                             self.channel.send(resp).await;
                             // todo! - generic unknown checker
-                            current_varient = Some(varient);
+                            _current_varient = Some(varient);
                         }
                         Err(_e) => { /* parse error */ }
                     }
@@ -80,4 +80,15 @@ impl CardReaderDevice {
 #[embassy_executor::task(pool_size = 1)]
 pub async fn card_reader_device_spawn(instance: &'static CardReaderDevice) {
     instance.run().await
+}
+
+pub fn alert_module_status() {
+    match SerialPayVarient::is_nda() {
+        true => {
+            defmt::info!("The module use a library for NDA devices.");
+        }
+        false => {
+            defmt::warn!("The module use a example library. It may not work in real fields.");
+        }
+    }
 }

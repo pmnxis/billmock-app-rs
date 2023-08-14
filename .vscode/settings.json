@@ -20,6 +20,7 @@
   // ],
   "rust-analyzer.linkedProjects": [
     "./serial-arcade-pay/Cargo.toml",
-    "./Cargo.toml"
+    "./Cargo.toml",
+    "./serial-arcade-example/Cargo.toml"
   ],
 }
