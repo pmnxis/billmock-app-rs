@@ -37,7 +37,7 @@ num_enum = { version = "0.7.0", default-features = false } # Application specifi
 serial-arcade-pay = { path = "serial-arcade-pay" }
 # `serial-arcade-pay-impl` would be replaced to NDA library that working on real field with dependency injection
 # details : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-serial-arcade-pay-impl = { path = "../billmock-ed785-lib" }
+serial-arcade-pay-impl = { path = "serial-arcade-example" }
 
 [profile.release]
 # or "z"

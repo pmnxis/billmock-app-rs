@@ -24,6 +24,22 @@ The project has been granted an open source disclosure except of NDA era.
 ## Dependencies
 See details here [dependencies](doc/dependencies.md)
 
+### NDA Dependencies
+To build with NDA features (GPARK Limited or own secret dependency), need adding following command on each `cargo` command.
+build, run or any other `cargo` command.
+
+```sh
+# dependency injection from git repository
+--config 'patch.crates-io.serial-arcade-pay-impl.git = "https://github.com/your_name/your_own_library.git"'
+
+# dependency injection from local repository
+--config 'patch.crates-io.serial-arcade-pay-impl.path = "../local_my_repo"'
+```
+
+In this repository, experimentally utilize dependency injection that the 'patch' function of 'cargo' to coexist both NDA code and open source example code.
+
+Detail stories [serial-device-limitation](docs/SerialDevice.md)
+
 ## Target Hardware
 Based on BillMock-HW 0.1 or above.
 
