@@ -7,7 +7,7 @@
 use embedded_hal::digital::InputPin;
 use {defmt_rtt as _, panic_probe as _};
 
-use crate::types::{AppMode, PriceVariant, TimingVariant};
+use crate::types::{AppMode, PriceReflection, TimingOverride};
 
 /*
  * embassy_stm32 Alert
@@ -50,13 +50,13 @@ impl<
         }
     }
 
-    pub fn read(&self) -> (PriceVariant, TimingVariant, AppMode) {
+    pub fn read(&self) -> (PriceReflection, TimingOverride, AppMode) {
         (
-            PriceVariant::try_from(
+            PriceReflection::try_from(
                 self.gpios.0.is_high().unwrap() as u8 + self.gpios.1.is_high().unwrap() as u8 * 2,
             )
             .unwrap(),
-            TimingVariant::try_from(
+            TimingOverride::try_from(
                 self.gpios.2.is_high().unwrap() as u8 + self.gpios.3.is_high().unwrap() as u8 * 2,
             )
             .unwrap(),
