@@ -10,21 +10,13 @@
   },
   "rust-analyzer.check.allTargets": false,
   "rust-analyzer.check.noDefaultFeatures": true,
-  "rust-analyzer.cargo.features": [
-    "billmock_default",
-    "time-driver-any",
-    "stm32g030c8"
-  ],
   "rust-analyzer.checkOnSave.extraArgs": [
     "--bins"
   ],
   "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
-  // "rust-analyzer.cargo.features": [
-  //   "nightly",
-  // ],
   "rust-analyzer.linkedProjects": [
-    "./serial-arcade-pay/Cargo.toml",
-    "./Cargo.toml",
-    "./serial-arcade-example/Cargo.toml"
+    "Cargo.toml",
+    "serial-arcade-pay/Cargo.toml",
+    "serial-arcade-example/Cargo.toml",
   ],
 }
