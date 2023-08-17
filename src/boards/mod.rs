@@ -10,7 +10,10 @@ use embassy_stm32::Config as Stm32Config;
 use embassy_sync::channel::Channel;
 use static_cell::make_static;
 
+#[cfg(feature = "hw_0v2")]
 use self::billmock_0v2::hardware_init_0v2;
+#[cfg(feature = "hw_0v3")]
+use self::billmock_0v3::hardware_init_0v3;
 use crate::components::dip_switch::DipSwitch;
 use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::{self, card_reader_device_spawn, CardReaderDevice};
@@ -27,7 +30,10 @@ pub const LED_INDEX_MAX: usize = 2;
 pub const LED_1_INDEX: usize = 0;
 pub const LED_2_INDEX: usize = 1;
 
+#[cfg(feature = "hw_0v2")]
 mod billmock_0v2;
+#[cfg(feature = "hw_0v3")]
+mod billmock_0v3;
 
 pub struct Hardware {
     /// Bill paper and coin acceptor input device for 1 and 2 player sides
@@ -88,7 +94,13 @@ impl Hardware {
         peripherals: embassy_stm32::Peripherals,
         shared_resource: &'static SharedResource,
     ) -> Hardware {
-        hardware_init_0v2(peripherals, shared_resource)
+        #[cfg(feature = "hw_0v2")]
+        let ret = hardware_init_0v2(peripherals, shared_resource);
+
+        #[cfg(feature = "hw_0v3")]
+        let ret = hardware_init_0v3(peripherals, shared_resource);
+
+        ret
     }
 
     /// Initialize MCU peripherals and nearby components

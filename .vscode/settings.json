@@ -10,7 +10,11 @@
   },
   "rust-analyzer.check.allTargets": false,
   "rust-analyzer.check.noDefaultFeatures": true,
-  "rust-analyzer.cargo.noDefaultFeatures": true,
+  "rust-analyzer.cargo.features": [
+    "billmock_default",
+    "time-driver-any",
+    "stm32g030c8"
+  ],
   "rust-analyzer.checkOnSave.extraArgs": [
     "--bins"
   ],

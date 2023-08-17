@@ -11,7 +11,10 @@ license = "MIT OR Apache-2.0"
 description = "application side of billmock hardware, powered by rust-embedded"
 
 [features]
-default = []
+default = ["billmock_default"]
+billmock_default = ["hw_0v3"] # To use rust-analzyer utilizing noDefaultFeatures on vscode 
+hw_0v2 = []
+hw_0v3 = []
 
 [dependencies]
 embassy-sync = { version = "0.2.0", git = "https://github.com/embassy-rs/embassy.git", rev = "4d1d125f4157084668a949f9bc24e4417628f9fe", features = ["defmt"] }

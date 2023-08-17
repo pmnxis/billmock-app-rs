@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-//! Hardware initialization code for BillMock Hardware Version 0.2
-//! The code follows on version 0.2 schematic
-//! https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v2.pdf
+//! Hardware initialization code for BillMock Hardware Version 0.3
+//! The code follows on version 0.3 schematic
+//! https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf
 
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
@@ -21,8 +21,6 @@ use crate::components;
 use crate::components::dip_switch::DipSwitch;
 use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::CardReaderDevice;
-// Original verion 0.2 hardware require start_button module. But current spec deprecated it.
-// use crate::components::start_button::StartButton;
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
 use crate::semi_layer::buffered_wait::InputPortKind;
@@ -31,7 +29,7 @@ bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
 });
 
-pub fn hardware_init_0v2(
+pub fn hardware_init_0v3(
     p: embassy_stm32::Peripherals,
     shared_resource: &'static SharedResource,
 ) -> Hardware {
@@ -59,19 +57,17 @@ pub fn hardware_init_0v2(
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
 
-    // 2023-08-17 , PA0 (Start1P Port out is not used anymore)
-
     Hardware {
         vend_sides: [
             VendSideBill::new(
-                Output::new(p.PB0.degrade(), Level::Low, Speed::Low), // REAL_INH
+                Output::new(p.PA1.degrade(), Level::Low, Speed::Low), // REAL0_INH
                 ExtiInput::new(
-                    Input::new(p.PB2, Pull::None).degrade(), // REAL_VND
+                    Input::new(p.PB2, Pull::None).degrade(), // REAL0_VND
                     p.EXTI2.degrade(),                       // EXTI2
                 ),
                 InputPortKind::Vend1P,
                 ExtiInput::new(
-                    Input::new(p.PB14, Pull::None).degrade(), // REAL_JAM (moved from PB15 at HW v0.3)
+                    Input::new(p.PB14, Pull::None).degrade(), // REAL0_STR
                     p.EXTI14.degrade(),                       // EXTI14
                 ),
                 InputPortKind::StartJam1P,
@@ -79,15 +75,15 @@ pub fn hardware_init_0v2(
                 &shared_resource.arcade_players_timing[PLAYER_1_INDEX],
             ),
             VendSideBill::new(
-                Output::new(p.PA1.degrade(), Level::Low, Speed::Low), // LED_STR1 (Temporary)
+                Output::new(p.PA0.degrade(), Level::Low, Speed::Low), // REAL1_INH
                 ExtiInput::new(
-                    Input::new(p.PD1, Pull::None).degrade(), // REAL_STR1
-                    p.EXTI1.degrade(),                       // EXTI1
+                    Input::new(p.PB11, Pull::None).degrade(), // REAL1_VND
+                    p.EXTI11.degrade(),                       // EXTI11 (HW 0.2 was EXTI1 with PD1)
                 ),
                 InputPortKind::Vend2P,
                 ExtiInput::new(
-                    Input::new(p.PB11, Pull::None).degrade(), // REAL_STR0
-                    p.EXTI11.degrade(),                       // EXTI11
+                    Input::new(p.PD1, Pull::None).degrade(), // REAL1_STR
+                    p.EXTI1.degrade(),                       // EXTI1 (HW 0.2 was EXTI11 with PB11)
                 ),
                 InputPortKind::StartJam2P,
                 &shared_resource.async_input_event_ch,
