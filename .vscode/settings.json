@@ -9,7 +9,14 @@
     "editor.formatOnSave": false
   },
   "rust-analyzer.check.allTargets": false,
-  "rust-analyzer.check.noDefaultFeatures": true,
+  // "rust-analyzer.check.noDefaultFeatures": true,
+  // "rust-analyzer.cargo.noDefaultFeatures": true,
+  "rust-analyzer.showUnlinkedFileNotification": false,
+  // "rust-analyzer.check.features": [
+  //   "billmock_default",
+  //   "hw_0v3"
+  // ],
+  // "rust-analyzer.cargo.features": "all",
   "rust-analyzer.checkOnSave.extraArgs": [
     "--bins"
   ],

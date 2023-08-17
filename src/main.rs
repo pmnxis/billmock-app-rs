@@ -19,12 +19,14 @@ use embassy_time::{Duration, Timer};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
-use crate::boards::Board;
+use crate::boards::*;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    let board = make_static!(Board::init());
+    // Initialize necessary BSP
+    let board: &'static mut Board = make_static!(Board::init());
 
+    // Spawns a task bound to the BSP
     board.start_tasks(&spawner);
 
     info!("Hello BillMock");
