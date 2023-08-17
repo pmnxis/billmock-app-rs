@@ -5,6 +5,7 @@
  */
 
 use core::cell::UnsafeCell;
+
 // https://docs.rust-embedded.org/book/concurrency/
 
 #[derive(Debug, Clone, Copy)]

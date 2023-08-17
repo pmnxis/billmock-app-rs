@@ -18,7 +18,7 @@ use crate::semi_layer::timing::DualPoleToggleTiming;
 pub struct VendSideBill {
     pub out_inhibit: BufferedOpenDrain,
     in_vend: BufferedWait,
-    in_jam: BufferedWait,
+    in_start_jam: BufferedWait,
 }
 
 impl VendSideBill {
@@ -26,21 +26,21 @@ impl VendSideBill {
         out_inhibit: Output<'static, AnyPin>,
         in_vend: ExtiInput<'static, AnyPin>,
         in_vend_event: InputPortKind,
-        in_jam: ExtiInput<'static, AnyPin>,
-        in_jam_event: InputPortKind,
+        in_start_jam: ExtiInput<'static, AnyPin>,
+        in_start_jam_event: InputPortKind,
         mpsc_ch: &'static InputEventChannel,
         timing: &'static DualPoleToggleTiming,
     ) -> VendSideBill {
         Self {
             out_inhibit: BufferedOpenDrain::new(out_inhibit, timing),
             in_vend: BufferedWait::new(in_vend, in_vend_event, mpsc_ch),
-            in_jam: BufferedWait::new(in_jam, in_jam_event, mpsc_ch),
+            in_start_jam: BufferedWait::new(in_start_jam, in_start_jam_event, mpsc_ch),
         }
     }
 
     pub fn start_tasks(&'static self, spawner: &Spawner) {
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.out_inhibit)));
         unwrap!(spawner.spawn(buffered_wait_spawn(&self.in_vend)));
-        unwrap!(spawner.spawn(buffered_wait_spawn(&self.in_jam)));
+        unwrap!(spawner.spawn(buffered_wait_spawn(&self.in_start_jam)));
     }
 }

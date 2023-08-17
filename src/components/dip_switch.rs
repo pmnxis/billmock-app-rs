@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-use embedded_hal::digital::InputPin;
+use embassy_stm32::gpio::{AnyPin, Input};
 use {defmt_rtt as _, panic_probe as _};
 
 use crate::types::{AppMode, PriceReflection, TimingOverride};
@@ -14,34 +14,26 @@ use crate::types::{AppMode, PriceReflection, TimingOverride};
  * You should enable feature `unstable-traits`
  */
 
-pub struct DipSwitch<
-    AnyPin0: InputPin,
-    AnyPin1: InputPin,
-    AnyPin2: InputPin,
-    AnyPin3: InputPin,
-    AnyPin4: InputPin,
-    AnyPin5: InputPin,
-> {
-    gpios: (AnyPin0, AnyPin1, AnyPin2, AnyPin3, AnyPin4, AnyPin5),
+pub struct DipSwitch {
+    gpios: (
+        Input<'static, AnyPin>,
+        Input<'static, AnyPin>,
+        Input<'static, AnyPin>,
+        Input<'static, AnyPin>,
+        Input<'static, AnyPin>,
+        Input<'static, AnyPin>,
+    ),
 }
 
 #[allow(dead_code)]
-impl<
-        AnyPin0: InputPin,
-        AnyPin1: InputPin,
-        AnyPin2: InputPin,
-        AnyPin3: InputPin,
-        AnyPin4: InputPin,
-        AnyPin5: InputPin,
-    > DipSwitch<AnyPin0, AnyPin1, AnyPin2, AnyPin3, AnyPin4, AnyPin5>
-{
+impl DipSwitch {
     pub const fn new(
-        in_price0: AnyPin0,
-        in_price1: AnyPin1,
-        in_timing0: AnyPin2,
-        in_timing1: AnyPin3,
-        in_mode0: AnyPin4,
-        in_mode1: AnyPin5,
+        in_price0: Input<'static, AnyPin>,
+        in_price1: Input<'static, AnyPin>,
+        in_timing0: Input<'static, AnyPin>,
+        in_timing1: Input<'static, AnyPin>,
+        in_mode0: Input<'static, AnyPin>,
+        in_mode1: Input<'static, AnyPin>,
     ) -> Self {
         Self {
             gpios: (
@@ -53,17 +45,15 @@ impl<
     pub fn read(&self) -> (PriceReflection, TimingOverride, AppMode) {
         (
             PriceReflection::try_from(
-                self.gpios.0.is_high().unwrap() as u8 + self.gpios.1.is_high().unwrap() as u8 * 2,
+                self.gpios.0.is_high() as u8 + self.gpios.1.is_high() as u8 * 2,
             )
             .unwrap(),
             TimingOverride::try_from(
-                self.gpios.2.is_high().unwrap() as u8 + self.gpios.3.is_high().unwrap() as u8 * 2,
+                self.gpios.2.is_high() as u8 + self.gpios.3.is_high() as u8 * 2,
             )
             .unwrap(),
-            AppMode::try_from(
-                self.gpios.4.is_high().unwrap() as u8 + self.gpios.5.is_high().unwrap() as u8 * 2,
-            )
-            .unwrap(),
+            AppMode::try_from(self.gpios.4.is_high() as u8 + self.gpios.5.is_high() as u8 * 2)
+                .unwrap(),
         )
     }
 }

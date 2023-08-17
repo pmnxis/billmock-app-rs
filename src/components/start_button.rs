@@ -15,11 +15,14 @@ use crate::semi_layer::buffered_wait::{
 };
 use crate::semi_layer::timing::DualPoleToggleTiming;
 
+/// deprecated from hardware version 0.3
+#[allow(dead_code)]
 pub struct StartButton {
     in_switch: BufferedWait,
     out_led: BufferedOpenDrain,
 }
 
+#[allow(dead_code)]
 impl StartButton {
     pub const fn new(
         in_switch: ExtiInput<'static, AnyPin>,

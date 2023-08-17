@@ -17,12 +17,17 @@ pub const MPSC_WAIT_INPUT_EVENT_CH_SIZE: usize = 32;
 // InputPortKind would be replace to
 // pub type InputPortKind = u8,
 // external enum with #[repr(u8)] will be used in other code space
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum InputPortKind {
     Start1P,
     Start2P,
-    Vend,
-    Jam,
+    Vend1P,
+    Vend2P,
+    Jam1P,
+    Jam2P,
+    StartJam1P,
+    StartJam2P,
     Inhibit1,
     Inhibit2,
 }
