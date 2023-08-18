@@ -51,7 +51,16 @@ Based on BillMock-HW 0.1 or above.
 ![bottom side image](docs/img/actual_pcb_0v2.jpg)
 
 ### Hardware design
-- Not sharable yet, will be released after fix some hardware bug.
+BillMock hardware schematic repository (only pdf)
+https://github.com/pmnxis/BillMock-HW-RELEASE
+
+The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual Gerber files and project files are private.
+
+## v 0.2 (2023-06-13)
+[BillMock-HW-0v2.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v2.pdf)
+
+## v 0.3 (2023-08-11)
+[BillMock-HW-0v3.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf)
 
 ## License
 This program and the accompanying materials are made available under the terms
