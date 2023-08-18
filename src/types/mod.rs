@@ -39,7 +39,7 @@ pub enum PriceReflection {
 
 /// ## Inhibit override dip switch configuration used in HW spec 0.3
 ///
-/// | Inhibit0 (`1`)| Inhibit1 (`2`)| Configuration                   |
+/// | Inhibit0 (`1`)| Inhibit1P (`2`)| Configuration                   |
 /// | :-----------: | :-----------: | ------------------------------- |
 /// | `0`           |  `0`          | Normal (No force overriding)    |
 /// | `0`           |  `1`          | Override inhibit on 1P as force |
@@ -59,9 +59,9 @@ pub enum InhibitOverride {
     /// `00` : default value
     Normal,
     /// `01` : Override 1P inhibit
-    ForceInhibit1P,
+    ForceInhibit1PP,
     /// `10` : Override 2P inhibit
-    ForceInhibit2P,
+    ForceInhibit2PP,
     /// `11` : Override global inhibit (1P/2P)
     ForceInhibitGlobal,
 }

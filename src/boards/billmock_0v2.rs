@@ -100,7 +100,7 @@ pub fn hardware_init_0v2(
                     Input::new(p.PD0, Pull::None).degrade(), // VIRT0_INH
                     p.EXTI0.degrade(),                       // EXTI0
                 ),
-                InputPortKind::Inhibit1,
+                InputPortKind::Inhibit1P,
                 Output::new(p.PD3.degrade(), Level::Low, Speed::Low), // VIRT0_BSY
                 Output::new(p.PD2.degrade(), Level::Low, Speed::Low), // VIRT0_VND
                 Output::new(p.PB9.degrade(), Level::Low, Speed::Low), // VIRT0_JAM
@@ -113,7 +113,7 @@ pub fn hardware_init_0v2(
                     Input::new(p.PA15, Pull::None).degrade(), // VIRT1_INH
                     p.EXTI15.degrade(),                       // EXTI15
                 ),
-                InputPortKind::Inhibit2,
+                InputPortKind::Inhibit2P,
                 Output::new(p.PB4.degrade(), Level::Low, Speed::Low), // VIRT1_BSY
                 Output::new(p.PC13.degrade(), Level::Low, Speed::Low), // VIRT1_VND
                 Output::new(p.PB8.degrade(), Level::Low, Speed::Low), // VIRT1_JAM

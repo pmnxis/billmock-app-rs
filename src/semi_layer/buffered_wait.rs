@@ -28,8 +28,8 @@ pub enum InputPortKind {
     Jam2P,
     StartJam1P,
     StartJam2P,
-    Inhibit1,
-    Inhibit2,
+    Inhibit1P,
+    Inhibit2P,
 }
 
 // 8bit-sized enum
