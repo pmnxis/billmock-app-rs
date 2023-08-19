@@ -14,23 +14,7 @@ use embassy_time::Instant;
 
 pub const MPSC_WAIT_INPUT_EVENT_CH_SIZE: usize = 32;
 
-// InputPortKind would be replace to
-// pub type InputPortKind = u8,
-// external enum with #[repr(u8)] will be used in other code space
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
-pub enum InputPortKind {
-    Start1P,
-    Start2P,
-    Vend1P,
-    Vend2P,
-    Jam1P,
-    Jam2P,
-    StartJam1P,
-    StartJam2P,
-    Inhibit1P,
-    Inhibit2P,
-}
+pub type RawInputPortKind = u8;
 
 // 8bit-sized enum
 #[derive(Debug, Clone, Copy)]
@@ -45,7 +29,7 @@ pub enum InputEventKind {
 }
 
 pub struct InputEvent {
-    pub port: InputPortKind,
+    pub port: RawInputPortKind,
     pub kind: TinyInputEventKind,
 }
 
@@ -57,7 +41,7 @@ const TINY_LONG_PRESS_MAX: u8 = (0x1 << 7) - 1;
 impl From<TinyInputEventKind> for InputEventKind {
     fn from(value: TinyInputEventKind) -> Self {
         if value == 0 {
-            return Self::Released;
+            Self::Released
         } else {
             match value {
                 0b1000_0000 => Self::Pressed,
@@ -80,7 +64,7 @@ impl From<InputEventKind> for TinyInputEventKind {
 /// Internal PullUp + 4050 + OpenDrain outside (NMOS or ULN2803)
 pub struct BufferedWait {
     wait: UnsafeCell<ExtiInput<'static, AnyPin>>,
-    port: InputPortKind,
+    port: RawInputPortKind,
     channel: &'static InputEventChannel,
 }
 
@@ -88,7 +72,7 @@ pub struct BufferedWait {
 impl BufferedWait {
     pub const fn new(
         wait: ExtiInput<'static, AnyPin>,
-        port: InputPortKind,
+        port: RawInputPortKind,
         channel: &'static InputEventChannel,
     ) -> BufferedWait {
         Self {

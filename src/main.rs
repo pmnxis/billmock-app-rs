@@ -6,6 +6,7 @@
 
 #![no_main]
 #![no_std]
+#![feature(const_trait_impl)]
 #![feature(type_alias_impl_trait)]
 
 mod boards;
@@ -20,10 +21,8 @@ use serial_arcade_pay::{GenericIncomeInfo, GenericPaymentRecv};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
-use crate::{
-    boards::*,
-    semi_layer::buffered_wait::{InputEventKind, InputPortKind},
-};
+use crate::types::input_port::InputPortKind;
+use crate::{boards::*, semi_layer::buffered_wait::InputEventKind};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -81,7 +80,10 @@ async fn main(spawner: Spawner) {
             Some(event) => {
                 // info!("EVENT comes - port:{}, kind:{}", event.port, event.kind);
                 info!("Some event comes");
-                match (event.port, InputEventKind::from(event.kind)) {
+                match (
+                    InputPortKind::try_from(event.port).unwrap(),
+                    InputEventKind::from(event.kind),
+                ) {
                     (InputPortKind::Start1P, InputEventKind::Pressed) => {
                         info!("Start1P Pressed");
                         host_1p.out_start.set_high().await;

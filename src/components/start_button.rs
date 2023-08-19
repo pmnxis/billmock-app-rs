@@ -10,10 +10,10 @@ use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
-use crate::semi_layer::buffered_wait::{
-    buffered_wait_spawn, BufferedWait, InputEventChannel, InputPortKind,
-};
+use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait, InputEventChannel};
 use crate::semi_layer::timing::DualPoleToggleTiming;
+use crate::types::const_convert::ConstInto;
+use crate::types::input_port::InputPortKind;
 
 /// deprecated from hardware version 0.3
 #[allow(dead_code)]
@@ -32,7 +32,7 @@ impl StartButton {
         timing: &'static DualPoleToggleTiming,
     ) -> Self {
         Self {
-            in_switch: BufferedWait::new(in_switch, in_switch_event, mpsc_ch),
+            in_switch: BufferedWait::new(in_switch, in_switch_event.const_into(), mpsc_ch),
             out_led: BufferedOpenDrain::new(out_led, timing),
         }
     }

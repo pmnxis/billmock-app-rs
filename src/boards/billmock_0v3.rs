@@ -23,7 +23,7 @@ use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::CardReaderDevice;
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
-use crate::semi_layer::buffered_wait::InputPortKind;
+use crate::types::input_port::InputPortKind;
 
 bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;

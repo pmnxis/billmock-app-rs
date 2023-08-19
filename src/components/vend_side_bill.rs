@@ -10,10 +10,10 @@ use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
-use crate::semi_layer::buffered_wait::{
-    buffered_wait_spawn, BufferedWait, InputEventChannel, InputPortKind,
-};
+use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait, InputEventChannel};
 use crate::semi_layer::timing::DualPoleToggleTiming;
+use crate::types::const_convert::ConstInto;
+use crate::types::input_port::InputPortKind;
 
 pub struct VendSideBill {
     pub out_inhibit: BufferedOpenDrain,
@@ -33,8 +33,8 @@ impl VendSideBill {
     ) -> VendSideBill {
         Self {
             out_inhibit: BufferedOpenDrain::new(out_inhibit, timing),
-            in_vend: BufferedWait::new(in_vend, in_vend_event, mpsc_ch),
-            in_start_jam: BufferedWait::new(in_start_jam, in_start_jam_event, mpsc_ch),
+            in_vend: BufferedWait::new(in_vend, in_vend_event.const_into(), mpsc_ch),
+            in_start_jam: BufferedWait::new(in_start_jam, in_start_jam_event.const_into(), mpsc_ch),
         }
     }
 

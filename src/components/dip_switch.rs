@@ -7,7 +7,7 @@
 use embassy_stm32::gpio::{AnyPin, Input};
 use {defmt_rtt as _, panic_probe as _};
 
-use crate::types::{AppMode, PriceReflection, TimingOverride};
+use crate::types::dip_switch_config::{AppMode, PriceReflection, TimingOverride};
 
 /*
  * embassy_stm32 Alert
