@@ -59,9 +59,9 @@ pub enum InhibitOverride {
     /// `00` : default value
     Normal,
     /// `01` : Override 1P inhibit
-    ForceInhibit1PP,
+    ForceInhibit1P,
     /// `10` : Override 2P inhibit
-    ForceInhibit2PP,
+    ForceInhibit2P,
     /// `11` : Override global inhibit (1P/2P)
     ForceInhibitGlobal,
 }

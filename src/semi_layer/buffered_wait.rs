@@ -28,18 +28,29 @@ pub enum InputEventKind {
     LongPressed(u8),
 }
 
-pub struct InputEvent {
-    pub port: RawInputPortKind,
-    pub kind: TinyInputEventKind,
+impl defmt::Format for InputEventKind {
+    fn format(&self, fmt: defmt::Formatter) {
+        match self {
+            InputEventKind::Released => defmt::write!(fmt, "Released"),
+            InputEventKind::Pressed => defmt::write!(fmt, "Pressed"),
+            InputEventKind::LongPressed(x) => defmt::write!(fmt, "LongPressed({})", x),
+        }
+    }
 }
 
-pub type InputEventChannel = Channel<ThreadModeRawMutex, InputEvent, MPSC_WAIT_INPUT_EVENT_CH_SIZE>;
+pub struct RawInputEvent {
+    pub port: RawInputPortKind,
+    pub event: RawInputEventKind,
+}
 
-pub type TinyInputEventKind = u8;
+pub type InputEventChannel =
+    Channel<ThreadModeRawMutex, RawInputEvent, MPSC_WAIT_INPUT_EVENT_CH_SIZE>;
+
+pub type RawInputEventKind = u8;
 const TINY_LONG_PRESS_MAX: u8 = (0x1 << 7) - 1;
 
-impl From<TinyInputEventKind> for InputEventKind {
-    fn from(value: TinyInputEventKind) -> Self {
+impl From<RawInputEventKind> for InputEventKind {
+    fn from(value: RawInputEventKind) -> Self {
         if value == 0 {
             Self::Released
         } else {
@@ -51,7 +62,7 @@ impl From<TinyInputEventKind> for InputEventKind {
     }
 }
 
-impl From<InputEventKind> for TinyInputEventKind {
+impl From<InputEventKind> for RawInputEventKind {
     fn from(value: InputEventKind) -> Self {
         match value {
             InputEventKind::Released => 0x00,
@@ -84,9 +95,9 @@ impl BufferedWait {
 
     async fn send(&self, event: InputEventKind) {
         self.channel
-            .send(InputEvent {
+            .send(RawInputEvent {
                 port: self.port,
-                kind: event.into(),
+                event: event.into(),
             })
             .await;
     }
@@ -107,7 +118,7 @@ impl BufferedWait {
             match ((Instant::now() - entered_time)
                 .as_millis()
                 .min(TINY_LONG_PRESS_MAX as u64 * 10)
-                / 10) as TinyInputEventKind
+                / 10) as RawInputEventKind
             {
                 0 => { /* too short time pressed */ }
                 x => {

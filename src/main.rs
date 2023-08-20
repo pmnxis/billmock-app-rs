@@ -9,6 +9,7 @@
 #![feature(const_trait_impl)]
 #![feature(type_alias_impl_trait)]
 
+mod application;
 mod boards;
 mod components;
 mod semi_layer;
@@ -21,7 +22,7 @@ use serial_arcade_pay::{GenericIncomeInfo, GenericPaymentRecv};
 use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
-use crate::types::input_port::InputPortKind;
+use crate::types::input_port::{InputEvent, InputPortKind};
 use crate::{boards::*, semi_layer::buffered_wait::InputEventKind};
 
 #[embassy_executor::main]
@@ -32,7 +33,7 @@ async fn main(spawner: Spawner) {
     // Spawns a task bound to the BSP
     board.start_tasks(&spawner);
     let hardware = &board.hardware;
-    let shared = &board.shared_resource;
+    let shared = board.shared_resource;
     let vend_1p = &hardware.vend_sides[PLAYER_1_INDEX];
     let vend_2p = &hardware.vend_sides[PLAYER_2_INDEX];
     let host_1p = &hardware.host_sides[PLAYER_1_INDEX];
@@ -74,57 +75,6 @@ async fn main(spawner: Spawner) {
             }
             None => {}
             _ => {}
-        }
-
-        match shared.async_input_event_ch.try_recv().ok() {
-            Some(event) => {
-                // info!("EVENT comes - port:{}, kind:{}", event.port, event.kind);
-                info!("Some event comes");
-                match (
-                    InputPortKind::try_from(event.port).unwrap(),
-                    InputEventKind::from(event.kind),
-                ) {
-                    (InputPortKind::Start1P, InputEventKind::Pressed) => {
-                        info!("Start1P Pressed");
-                        host_1p.out_start.set_high().await;
-                    }
-                    (InputPortKind::Start1P, InputEventKind::Released) => {
-                        info!("Start1P Released");
-                        host_1p.out_start.set_low().await;
-                    }
-                    (InputPortKind::Start2P, InputEventKind::Pressed) => {
-                        info!("Start2P Pressed");
-                        host_2p.out_start.set_high().await;
-                    }
-                    (InputPortKind::Start2P, InputEventKind::Released) => {
-                        info!("Start2P Released");
-                        host_2p.out_start.set_low().await;
-                    }
-                    (InputPortKind::Inhibit1P, InputEventKind::Pressed) => {
-                        vend_1p.out_inhibit.set_high().await;
-                    }
-                    (InputPortKind::Inhibit1P, InputEventKind::Released) => {
-                        vend_2p.out_inhibit.set_low().await;
-                    }
-                    (InputPortKind::Vend1P, InputEventKind::LongPressed(duration_10ms)) => {
-                        if duration_10ms > 1 {
-                            info!("Vend LongPressed");
-
-                            // this is proof of concept, doesn't cover all start1p/2p complex selection
-                            host_1p.out_vend.tick_tock(1).await;
-                        }
-                    }
-                    (InputPortKind::Vend1P, InputEventKind::Pressed) => {
-                        info!("Vend Pressed")
-                    }
-                    (InputPortKind::Vend1P, InputEventKind::Released) => {
-                        info!("Vend Released")
-                    }
-                    // not implement JAM side
-                    _ => {}
-                }
-            }
-            None => {}
         }
 
         Timer::after(Duration::from_millis(100)).await;

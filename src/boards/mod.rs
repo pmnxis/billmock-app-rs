@@ -21,6 +21,7 @@ use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use crate::semi_layer::buffered_wait::InputEventChannel;
 use crate::semi_layer::timing::{DualPoleToggleTiming, SharedToggleTiming, ToggleTiming};
+use crate::types::input_port::InputPortKind;
 
 pub const PLAYER_INDEX_MAX: usize = 2;
 pub const PLAYER_1_INDEX: usize = 0;
@@ -174,6 +175,10 @@ impl SharedResource {
     }
 }
 
+pub struct BoardCorrespondOutputMatchError<Enum: Sized> {
+    pub origin: Enum,
+}
+
 pub struct Board {
     pub hardware: Hardware,
     pub shared_resource: &'static SharedResource,
@@ -195,5 +200,22 @@ impl Board {
     pub fn start_tasks(&'static self, spawner: &Spawner) -> &Self {
         self.hardware.start_tasks(spawner);
         self
+    }
+
+    pub fn correspond_output(
+        &'static self,
+        port: &InputPortKind,
+    ) -> Result<&BufferedOpenDrain, BoardCorrespondOutputMatchError<InputPortKind>> {
+        match port {
+            InputPortKind::Vend1P => Ok(&self.hardware.host_sides[PLAYER_1_INDEX].out_vend),
+            InputPortKind::Vend2P => Ok(&self.hardware.host_sides[PLAYER_2_INDEX].out_vend),
+            InputPortKind::Jam1P => Ok(&self.hardware.host_sides[PLAYER_1_INDEX].out_jam),
+            InputPortKind::Jam2P => Ok(&self.hardware.host_sides[PLAYER_2_INDEX].out_jam),
+            InputPortKind::Start1P => Ok(&self.hardware.host_sides[PLAYER_1_INDEX].out_start),
+            InputPortKind::Start2P => Ok(&self.hardware.host_sides[PLAYER_2_INDEX].out_start),
+            InputPortKind::Inhibit1P => Ok(&self.hardware.vend_sides[PLAYER_1_INDEX].out_inhibit),
+            InputPortKind::Inhibit2P => Ok(&self.hardware.vend_sides[PLAYER_2_INDEX].out_inhibit),
+            x => Err(BoardCorrespondOutputMatchError { origin: x.clone() }),
+        }
     }
 }
