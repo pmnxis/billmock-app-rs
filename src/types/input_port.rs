@@ -11,7 +11,7 @@ use crate::types::const_convert::*;
 
 #[allow(dead_code)]
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive)]
 pub enum InputPortKind {
     Start1P = 0,
     Start2P = 1,
@@ -23,9 +23,11 @@ pub enum InputPortKind {
     StartJam2P = 7,
     Inhibit1P = 8,
     Inhibit2P = 9,
+    // Ignored signal by filter function
+    Nothing = 10,
 }
 
-static INPUT_PORT_KIND_STRS: [&str; 10] = [
+static INPUT_PORT_KIND_STRS: [&str; 11] = [
     "Start1P",
     "Start2P",
     "Vend1P",
@@ -36,6 +38,7 @@ static INPUT_PORT_KIND_STRS: [&str; 10] = [
     "StartJam2P",
     "Inhibit1P",
     "Inhibit2P",
+    "Nothing",
 ];
 
 // assert_eq!(InputPortKind::count(), INPUT_PORT_KIND_STRS.len());

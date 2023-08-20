@@ -7,12 +7,9 @@
 use embassy_stm32::gpio::{AnyPin, Input};
 use {defmt_rtt as _, panic_probe as _};
 
-use crate::types::dip_switch_config::{AppMode, PriceReflection, TimingOverride};
+use crate::types::dip_switch_config::{AppMode0V3, InhibitOverride, TimingOverride};
 
-/*
- * embassy_stm32 Alert
- * You should enable feature `unstable-traits`
- */
+// todo! - auto bouncer with async/await
 
 pub struct DipSwitch {
     gpios: (
@@ -28,8 +25,8 @@ pub struct DipSwitch {
 #[allow(dead_code)]
 impl DipSwitch {
     pub const fn new(
-        in_price0: Input<'static, AnyPin>,
-        in_price1: Input<'static, AnyPin>,
+        in_inhibit0: Input<'static, AnyPin>,
+        in_inhibit1: Input<'static, AnyPin>,
         in_timing0: Input<'static, AnyPin>,
         in_timing1: Input<'static, AnyPin>,
         in_mode0: Input<'static, AnyPin>,
@@ -37,14 +34,19 @@ impl DipSwitch {
     ) -> Self {
         Self {
             gpios: (
-                in_price0, in_price1, in_timing0, in_timing1, in_mode0, in_mode1,
+                in_inhibit0,
+                in_inhibit1,
+                in_timing0,
+                in_timing1,
+                in_mode0,
+                in_mode1,
             ),
         }
     }
 
-    pub fn read(&self) -> (PriceReflection, TimingOverride, AppMode) {
+    pub fn read(&self) -> (InhibitOverride, TimingOverride, AppMode0V3) {
         (
-            PriceReflection::try_from(
+            InhibitOverride::try_from(
                 self.gpios.0.is_high() as u8 + self.gpios.1.is_high() as u8 * 2,
             )
             .unwrap(),
@@ -52,7 +54,7 @@ impl DipSwitch {
                 self.gpios.2.is_high() as u8 + self.gpios.3.is_high() as u8 * 2,
             )
             .unwrap(),
-            AppMode::try_from(self.gpios.4.is_high() as u8 + self.gpios.5.is_high() as u8 * 2)
+            AppMode0V3::try_from(self.gpios.4.is_high() as u8 + self.gpios.5.is_high() as u8 * 2)
                 .unwrap(),
         )
     }
