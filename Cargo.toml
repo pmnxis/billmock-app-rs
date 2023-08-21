@@ -19,6 +19,7 @@ hw_0v3 = []
 [dependencies]
 embassy-sync = { version = "0.2.0", git = "https://github.com/embassy-rs/embassy.git", rev = "bb275f7e25e9f0a3cceb3045bceb1822167e7b31", features = ["defmt"] }
 embassy-executor = { version = "0.2.0", git = "https://github.com/embassy-rs/embassy.git", rev = "bb275f7e25e9f0a3cceb3045bceb1822167e7b31", features = ["nightly", "arch-cortex-m", "executor-thread", "defmt", "integrated-timers"] }
+embassy-futures = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "bb275f7e25e9f0a3cceb3045bceb1822167e7b31", features = ["defmt"] }
 embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "bb275f7e25e9f0a3cceb3045bceb1822167e7b31", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
 embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "bb275f7e25e9f0a3cceb3045bceb1822167e7b31", features = ["nightly", "defmt", "time-driver-any", "stm32g030c8", "memory-x", "unstable-pac", "exti", "unstable-traits"] } # "unstable-traits" for use InputPin trait for gpio
 embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "bb275f7e25e9f0a3cceb3045bceb1822167e7b31", features = ["nightly"] }

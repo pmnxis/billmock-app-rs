@@ -6,31 +6,11 @@
 
 use super::io_bypass::io_bypass;
 use crate::boards::*;
-use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::input_port::{InputEvent, InputPortKind};
+use crate::types::player::Player;
 
-#[derive(Debug, Clone, Copy)]
-pub enum InsteadStartJam {
-    Start,
-    Jam,
-}
-
+#[allow(dead_code)]
 impl InputEvent {
-    pub fn remap(&mut self, instead: InsteadStartJam) -> Self {
-        let port = match (self.port, instead) {
-            (InputPortKind::StartJam1P, InsteadStartJam::Jam) => InputPortKind::Jam1P,
-            (InputPortKind::StartJam2P, InsteadStartJam::Jam) => InputPortKind::Jam2P,
-            (InputPortKind::StartJam1P, InsteadStartJam::Start) => InputPortKind::Start1P,
-            (InputPortKind::StartJam2P, InsteadStartJam::Start) => InputPortKind::Start2P,
-            (x, _) => x,
-        };
-
-        Self {
-            port,
-            event: self.event,
-        }
-    }
-
     pub fn replace(&self, port: (InputPortKind, InputPortKind)) -> Self {
         if self.port == port.0 {
             Self {
@@ -101,6 +81,48 @@ impl InputEvent {
         Self {
             port: InputPortKind::Nothing,
             event: self.event,
+        }
+    }
+
+    pub fn flip_player(&self) -> Self {
+        Self {
+            port: match self.port {
+                InputPortKind::Inhibit1P => InputPortKind::Inhibit2P,
+                InputPortKind::Inhibit2P => InputPortKind::Inhibit1P,
+                InputPortKind::Start1P => InputPortKind::Start2P,
+                InputPortKind::Start2P => InputPortKind::Start1P,
+                InputPortKind::Jam1P => InputPortKind::Jam2P,
+                InputPortKind::Jam2P => InputPortKind::Jam1P,
+                InputPortKind::StartJam1P => InputPortKind::StartJam2P,
+                InputPortKind::StartJam2P => InputPortKind::StartJam1P,
+                InputPortKind::Vend2P => InputPortKind::Vend1P,
+                InputPortKind::Vend1P => InputPortKind::Vend2P,
+                InputPortKind::Nothing => InputPortKind::Nothing,
+            },
+            event: self.event,
+        }
+    }
+
+    pub fn ignore_player(&self, player: Player) -> Self {
+        match (self.port, player) {
+            (
+                InputPortKind::Inhibit1P
+                | InputPortKind::Jam1P
+                | InputPortKind::Start1P
+                | InputPortKind::Vend1P,
+                Player::Player1,
+            ) => *self,
+            (
+                InputPortKind::Inhibit2P
+                | InputPortKind::Jam2P
+                | InputPortKind::Start2P
+                | InputPortKind::Vend2P,
+                Player::Player2,
+            ) => *self,
+            _ => Self {
+                port: InputPortKind::Nothing,
+                event: self.event,
+            },
         }
     }
 

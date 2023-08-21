@@ -9,3 +9,5 @@ pub mod dip_switch_config;
 pub mod input_port;
 
 pub mod const_convert;
+
+pub mod player;
