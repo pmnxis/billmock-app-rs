@@ -34,10 +34,18 @@ static_cell = { version = "1.2", features = ["nightly"] }
 num_enum = { version = "0.7.0", default-features = false } # Application specific import (only `no_std` crates alllowed)
 
 # Application specific library
-serial-arcade-pay = { path = "serial-arcade-pay" }
+
+# serial-arcade-pay = { path = "serial-arcade-pay" }
+# serial-arcade-pay-impl = { path = "serial-arcade-example" }
+
+# The above dependency configurations are intentionally set to an external address in this repository
+# for the purpose of compiling both the original and NDA code simultaneously.
+# However, in reality, during a regular build, due to the patched content in `.cargo/config.toml`,
+# the code accesses the locally stored directory directly without connecting to the URL.
 # `serial-arcade-pay-impl` would be replaced to NDA library that working on real field with dependency injection
 # details : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-serial-arcade-pay-impl = { path = "serial-arcade-example" }
+serial-arcade-pay = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
+serial-arcade-pay-impl = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
 
 [profile.release]
 # or "z"

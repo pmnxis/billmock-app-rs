@@ -3,7 +3,12 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
-# replace STM32G071C8Rx with your chip as listed in `probe-rs-cli chip list`
+# [Mass Production Reminder]
+# To address supply availability and cost reduction,
+# it is possible to switch to STM32G030C6Tx.
+# However, please note that currently, in the debug build, the flash section exceeds 32KB.
+# Therefore, this change will be applicable only for production use,
+# considering its benefits in the release build.
 runner = "probe-rs-cli run --chip STM32G030C8Tx"
 
 [build]
@@ -11,3 +16,11 @@ target = "thumbv6m-none-eabi"
 
 [env]
 DEFMT_LOG = "trace"
+
+# As described in the `Cargo.toml` located in the root directory of the project,
+# in order to maintain a separation between the NDA code and open-source code,
+# the project follows a re-patching approach for incorporating the library source code
+# from the local environment into the actual open-source build.
+[patch.'https://github.com/pmnxis/billmock-app-rs.git']
+serial-arcade-pay = { path = "serial-arcade-pay" }
+serial-arcade-pay-impl = { path = "serial-arcade-example" }

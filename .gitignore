@@ -8,3 +8,5 @@ target_ci_stable
 Cargo.lock
 third_party
 out/
+nda
+nda_note.md
