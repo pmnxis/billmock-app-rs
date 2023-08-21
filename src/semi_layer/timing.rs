@@ -30,15 +30,11 @@ pub struct SharedToggleTiming(UnsafeCell<ToggleTiming>);
 impl SharedToggleTiming {
     pub const fn new_custom(timing: ToggleTiming) -> Self {
         // https://doc.rust-lang.org/reference/const_eval.html#const-functions
-        Self {
-            0: UnsafeCell::new(timing),
-        }
+        Self(UnsafeCell::new(timing))
     }
 
     pub const fn default() -> Self {
-        Self {
-            0: UnsafeCell::new(ToggleTiming::default()),
-        }
+        Self(UnsafeCell::new(ToggleTiming::default()))
     }
 
     #[allow(dead_code)]
@@ -48,7 +44,7 @@ impl SharedToggleTiming {
 
     #[allow(dead_code)]
     pub fn get(&self) -> ToggleTiming {
-        unsafe { *self.0.get().clone() }
+        unsafe { *self.0.get() }
     }
 }
 

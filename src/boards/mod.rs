@@ -193,7 +193,7 @@ impl Board {
 
         Self {
             hardware,
-            shared_resource: shared_resource,
+            shared_resource,
         }
     }
 
@@ -215,7 +215,7 @@ impl Board {
             InputPortKind::Start2P => Ok(&self.hardware.host_sides[PLAYER_2_INDEX].out_start),
             InputPortKind::Inhibit1P => Ok(&self.hardware.vend_sides[PLAYER_1_INDEX].out_inhibit),
             InputPortKind::Inhibit2P => Ok(&self.hardware.vend_sides[PLAYER_2_INDEX].out_inhibit),
-            x => Err(BoardCorrespondOutputMatchError { origin: x.clone() }),
+            x => Err(BoardCorrespondOutputMatchError { origin: *x }),
         }
     }
 }

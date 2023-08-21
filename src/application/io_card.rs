@@ -87,7 +87,7 @@ impl PaymentReceive {
                     _ => host_1p,
                 }
                 .out_vend
-                .tick_tock(c.clone().min(u8::MAX.into()) as u8)
+                .tick_tock(c.min(u8::MAX.into()) as u8)
                 .await;
             }
             GenericPaymentRecv::Income(GenericIncomeInfo {
@@ -103,7 +103,7 @@ impl PaymentReceive {
                     _ => host_1p,
                 }
                 .out_vend
-                .tick_tock(c.clone().min(u8::MAX.into()) as u8)
+                .tick_tock(c.min(u8::MAX.into()) as u8)
                 .await;
             }
             _ => {}

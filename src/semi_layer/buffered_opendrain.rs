@@ -185,15 +185,15 @@ impl MicroHsm {
             Self::SetHigh => Self::SetHigh,
             Self::TickTock(fsm) => fsm
                 .try_substract(&timing.shared.get(), elapsed)
-                .map_or(Self::default(), |f| Self::TickTock(f)),
+                .map_or(Self::default(), Self::TickTock),
             Self::AltTickTock(fsm) => fsm
-                .try_substract(&timing.alt, elapsed)
-                .map_or(Self::default(), |f: NanoFsm| Self::AltTickTock(f)),
+                .try_substract(timing.alt, elapsed)
+                .map_or(Self::default(), Self::AltTickTock),
             Self::ForeverBlink(fsm) => {
                 Self::ForeverBlink(fsm.substract(&timing.shared.get(), elapsed))
             }
             Self::AltForeverBlink(fsm) => {
-                Self::AltForeverBlink(fsm.substract(&timing.alt, elapsed))
+                Self::AltForeverBlink(fsm.substract(timing.alt, elapsed))
             }
         }
     }

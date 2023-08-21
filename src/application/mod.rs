@@ -46,16 +46,13 @@ impl Application {
                 }
             };
 
-            match hardware.card_reader.channel.try_recv().ok() {
-                Some(x) => {
-                    PaymentReceive::from((default_serial, x))
-                        .override_player_by_duration()
-                        .apply_output(board)
-                        .await;
+            if let Some(x) = hardware.card_reader.channel.try_recv().ok() {
+                PaymentReceive::from((default_serial, x))
+                    .override_player_by_duration()
+                    .apply_output(board)
+                    .await;
 
-                    // todo! - ACK pass to TX
-                }
-                _ => {}
+                // todo! - ACK pass to TX
             }
 
             match shared.async_input_event_ch.try_recv().ok() {
