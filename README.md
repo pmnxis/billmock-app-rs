@@ -30,10 +30,12 @@ build, run or any other `cargo` command.
 
 ```sh
 # dependency injection from git repository
---config 'patch.crates-io.serial-arcade-pay-impl.git = "https://github.com/your_name/your_own_library.git"'
+# CAUTION , this should be work but not working
+--config "patch.'https://github.com/pmnxis/billmock-app-rs.git'.serial-arcade-pay-impl.git = \"https://github.com/user_name/repo_name.git\""
 
 # dependency injection from local repository
---config 'patch.crates-io.serial-arcade-pay-impl.path = "../local_my_repo"'
+# this works
+--config "patch.'https://github.com/pmnxis/billmock-app-rs.git'.serial-arcade-pay-impl.path = \"../repo_name\""
 ```
 
 In this repository, experimentally utilize dependency injection that the 'patch' function of 'cargo' to coexist both NDA code and open source example code.
