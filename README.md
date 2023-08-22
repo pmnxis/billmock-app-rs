@@ -13,13 +13,32 @@ Used rust experimentally.
 This repository is aiming three goal.
 One for development of production firmware and second is making a proof of concept that rust embedded is usable for actual embedded production. And last goal is setting some example about production-rust-embedded-code.
 
-**This project is still under the development, not working yet**
+**This project is currently under development, and some minor features are still under development.**
 
 ## Billmock
 It is hardware and software for the purpose of converting I/O signals related to money payment of arcade game machines for compatibility.
 
 This project began development at the request of **GPARK Co., Ltd**<sup>[4](#footnote_1)</sup> and was designed and developed for the using credit card readers in arcade game machine and compatibility of existing payment systems (open-drain-based), and is open to the public except for code in the NDA area.
 The project has been granted an open source disclosure except of NDA era.
+
+## Target Hardware
+Based on BillMock-HW 0.3. <br/>
+0.2 HW bring-up codes are still left for recyle the old PCB.
+
+### Target hardware image
+![Actual BillMock PCB 0v3](docs/img/BillMockPCB_0v3.jpg)
+
+### Hardware design
+BillMock hardware schematic repository (only pdf)
+https://github.com/pmnxis/BillMock-HW-RELEASE
+
+The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual Gerber files and project files are private.
+
+#### v 0.2 (2023-06-13)
+[BillMock-HW-0v2.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v2.pdf)
+
+#### v 0.3 (2023-08-11)
+[BillMock-HW-0v3.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf)
 
 ## Dependencies
 See details here [dependencies](doc/dependencies.md)
@@ -41,28 +60,6 @@ build, run or any other `cargo` command.
 In this repository, experimentally utilize dependency injection that the 'patch' function of 'cargo' to coexist both NDA code and open source example code.
 
 Detail stories [serial-device-limitation](docs/SerialDevice.md)
-
-## Target Hardware
-Based on BillMock-HW 0.1 or above.
-
-### Target hardware image
-| top side | bottom side |
-| ---- | ---- |
-| ![top side image](docs/img/pcb_top_0v2.png) | ![bottom side image](docs/img/pcb_bot_0v2.png) | 
-
-![bottom side image](docs/img/actual_pcb_0v2.jpg)
-
-### Hardware design
-BillMock hardware schematic repository (only pdf)
-https://github.com/pmnxis/BillMock-HW-RELEASE
-
-The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual Gerber files and project files are private.
-
-#### v 0.2 (2023-06-13)
-[BillMock-HW-0v2.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v2.pdf)
-
-#### v 0.3 (2023-08-11)
-[BillMock-HW-0v3.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf)
 
 ## License
 This program and the accompanying materials are made available under the terms
