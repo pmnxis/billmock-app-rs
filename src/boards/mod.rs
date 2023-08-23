@@ -78,7 +78,7 @@ impl Hardware {
 
     /// Initialize MCU PLL and CPU on init hardware
     /// > `Hardware::mcu_pre_init()`
-    /// 2 `SharedResource::init()`
+    /// 2 `make_static!(SharedResource::init())`
     /// 3 `Hardware::hardware_init(..)`
     /// 4 `hardware.start_tasks(..)`
     pub fn mcu_pre_init() -> embassy_stm32::Peripherals {
@@ -87,7 +87,7 @@ impl Hardware {
 
     /// Initialize MCU peripherals and nearby components
     /// 1 `Hardware::mcu_pre_init()`
-    /// 2 `SharedResource::init()`
+    /// 2 `make_static!(SharedResource::init())`
     /// > `Hardware::hardware_init(..)`
     /// 4 `hardware.start_tasks(..)`
     fn hardware_init(
@@ -105,7 +105,7 @@ impl Hardware {
 
     /// Initialize MCU peripherals and nearby components
     /// 1 `Hardware::mcu_pre_init()`
-    /// 2 `SharedResource::init()`
+    /// 2 `make_static!(SharedResource::init())`
     /// 3 `Hardware::hardware_init(..)`
     /// > `hardware.start_tasks(..)`
     fn start_tasks(&'static self, spawner: &Spawner) {
@@ -144,32 +144,26 @@ pub struct SharedResource {
 impl SharedResource {
     /// Initialize necessary shared resource
     /// 1 `Hardware::mcu_pre_init()`
-    /// > `SharedResource::init()`
+    /// > `make_static!(SharedResource::init())`
     /// 3 `Hardware::hardware_init(..)`
     /// 4 `hardware.start_tasks(..)`
     fn init() -> Self {
-        let player1_timing_shared = make_static!(SharedToggleTiming::default());
-        let player1_timing_alt = make_static!(ToggleTiming::default());
-
-        let player2_timing_shared = make_static!(SharedToggleTiming::default());
-        let player2_timing_alt = make_static!(ToggleTiming::default());
-
-        let indicator_shared = make_static!(SharedToggleTiming::new_custom(ToggleTiming {
-            high_ms: 500,
-            low_ms: 500
-        }));
-        let indicator_alt = make_static!(ToggleTiming {
-            high_ms: 1000,
-            low_ms: 1000
-        });
-
         Self {
             async_input_event_ch: BufferedWaitReceiver::new(),
             arcade_players_timing: [
-                DualPoleToggleTiming::new(player1_timing_shared, player1_timing_alt),
-                DualPoleToggleTiming::new(player2_timing_shared, player2_timing_alt),
+                DualPoleToggleTiming::new(SharedToggleTiming::default(), ToggleTiming::default()),
+                DualPoleToggleTiming::new(SharedToggleTiming::default(), ToggleTiming::default()),
             ],
-            indicator_timing: DualPoleToggleTiming::new(indicator_shared, indicator_alt),
+            indicator_timing: DualPoleToggleTiming::new(
+                SharedToggleTiming::new_custom(ToggleTiming {
+                    high_ms: 500,
+                    low_ms: 500,
+                }),
+                ToggleTiming {
+                    high_ms: 1000,
+                    low_ms: 1000,
+                },
+            ),
         }
     }
 }

@@ -57,7 +57,7 @@ pub fn hardware_init_0v3(
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
 
-    let async_input_event_ch = shared_resource.async_input_event_ch.channel;
+    let async_input_event_ch = &shared_resource.async_input_event_ch.channel;
 
     Hardware {
         vend_sides: [

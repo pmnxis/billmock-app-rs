@@ -9,29 +9,28 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::channel::TryRecvError;
-use static_cell::make_static;
 
 use super::buffered_wait::{InputEventChannel, InputEventKind, RawInputEvent};
 
 // #[allow(unused)]
 pub struct BufferedWaitReceiver {
-    pub channel: &'static InputEventChannel,
+    pub channel: InputEventChannel,
     bit_cache: Mutex<ThreadModeRawMutex, u16>,
 }
 
 impl BufferedWaitReceiver {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
-            channel: make_static!(Channel::new()),
+            channel: Channel::new(),
             bit_cache: Mutex::new(0),
         }
     }
 
-    pub fn try_recv(&self) -> Result<RawInputEvent, TryRecvError> {
+    pub fn try_recv(&'static self) -> Result<RawInputEvent, TryRecvError> {
         let received = self.channel.try_recv()?;
         let event = InputEventKind::from(received.event);
 
-        let port_num = u8::from(received.port) as usize;
+        let port_num = received.port as usize;
         match event {
             InputEventKind::Pressed => {
                 self.bit_cache.lock(|x| {
@@ -52,11 +51,11 @@ impl BufferedWaitReceiver {
     }
 
     #[allow(dead_code)]
-    pub async fn recv(&self) -> RawInputEvent {
+    pub async fn recv(&'static self) -> RawInputEvent {
         let received = self.channel.recv().await;
         let event = InputEventKind::from(received.event);
 
-        let port_num = u8::from(received.port) as usize;
+        let port_num = received.port as usize;
         match event {
             InputEventKind::Pressed => {
                 self.bit_cache.lock(|x| {
@@ -77,6 +76,6 @@ impl BufferedWaitReceiver {
     }
 
     pub fn get_cache(&self) -> u16 {
-        self.bit_cache.lock(|x| x.clone())
+        self.bit_cache.lock(|x| *x)
     }
 }

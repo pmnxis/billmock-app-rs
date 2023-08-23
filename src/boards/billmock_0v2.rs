@@ -59,7 +59,7 @@ pub fn hardware_init_0v2(
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
 
-    let async_input_event_ch = shared_resource.async_input_event_ch.channel;
+    let async_input_event_ch = &shared_resource.async_input_event_ch.channel;
 
     // 2023-08-17 , PA0 (Start1P Port out is not used anymore)
 

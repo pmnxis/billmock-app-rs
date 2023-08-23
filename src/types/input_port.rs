@@ -27,7 +27,7 @@ pub enum InputPortKind {
     Nothing = 10,
 }
 
-static INPUT_PORT_KIND_STRS: [&str; 11] = [
+const INPUT_PORT_KIND_STRS: [&str; 11] = [
     "Start1P",
     "Start2P",
     "Vend1P",

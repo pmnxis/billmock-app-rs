@@ -33,7 +33,7 @@ impl NanoFsm {
     /// Try substract `NanoFsm`
     /// Result with Error is toggle count, state, duration reached or underflowed zero
     /// Ok(Some) means there's changes
-    fn try_substract(&self, timing: &ToggleTiming, elapsed: u16) -> Result<Self, ()> {
+    fn try_substract(&self, timing: ToggleTiming, elapsed: u16) -> Result<Self, ()> {
         match self.duration > elapsed {
             true => Ok(NanoFsm {
                 toggle_count: self.toggle_count,
@@ -73,7 +73,7 @@ pub struct BlinkFsm {
 
 impl BlinkFsm {
     /// Substract `BlinkFsm`
-    fn substract(&self, timing: &ToggleTiming, elapsed: u16) -> Self {
+    fn substract(&self, timing: ToggleTiming, elapsed: u16) -> Self {
         match self.duration > elapsed {
             true => BlinkFsm {
                 state: self.state,
@@ -184,17 +184,15 @@ impl MicroHsm {
             Self::SetLow => Self::SetLow,
             Self::SetHigh => Self::SetHigh,
             Self::TickTock(fsm) => fsm
-                .try_substract(&timing.shared.get(), elapsed)
+                .try_substract(timing.shared.get(), elapsed)
                 .map_or(Self::default(), Self::TickTock),
             Self::AltTickTock(fsm) => fsm
                 .try_substract(timing.alt, elapsed)
                 .map_or(Self::default(), Self::AltTickTock),
             Self::ForeverBlink(fsm) => {
-                Self::ForeverBlink(fsm.substract(&timing.shared.get(), elapsed))
+                Self::ForeverBlink(fsm.substract(timing.shared.get(), elapsed))
             }
-            Self::AltForeverBlink(fsm) => {
-                Self::AltForeverBlink(fsm.substract(timing.alt, elapsed))
-            }
+            Self::AltForeverBlink(fsm) => Self::AltForeverBlink(fsm.substract(timing.alt, elapsed)),
         }
     }
 
