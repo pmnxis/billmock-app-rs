@@ -8,5 +8,6 @@
 
 pub(crate) mod buffered_opendrain;
 pub(crate) mod buffered_wait;
+pub(crate) mod buffered_wait_receiver;
 
 pub mod timing;

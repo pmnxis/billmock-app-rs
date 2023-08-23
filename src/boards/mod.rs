@@ -7,7 +7,6 @@
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::Config as Stm32Config;
-use embassy_sync::channel::Channel;
 use static_cell::make_static;
 
 #[cfg(feature = "hw_0v2")]
@@ -19,7 +18,7 @@ use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::{self, card_reader_device_spawn, CardReaderDevice};
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
-use crate::semi_layer::buffered_wait::InputEventChannel;
+use crate::semi_layer::buffered_wait_receiver::BufferedWaitReceiver;
 use crate::semi_layer::timing::{DualPoleToggleTiming, SharedToggleTiming, ToggleTiming};
 use crate::types::input_port::InputPortKind;
 
@@ -133,7 +132,7 @@ impl Hardware {
 
 pub struct SharedResource {
     /// Common Input event channel
-    pub async_input_event_ch: InputEventChannel,
+    pub async_input_event_ch: BufferedWaitReceiver,
 
     /// Open-drain signal timing that shared or const-ish
     pub arcade_players_timing: [DualPoleToggleTiming; PLAYER_INDEX_MAX],
@@ -165,7 +164,7 @@ impl SharedResource {
         });
 
         Self {
-            async_input_event_ch: Channel::new(),
+            async_input_event_ch: BufferedWaitReceiver::new(),
             arcade_players_timing: [
                 DualPoleToggleTiming::new(player1_timing_shared, player1_timing_alt),
                 DualPoleToggleTiming::new(player2_timing_shared, player2_timing_alt),

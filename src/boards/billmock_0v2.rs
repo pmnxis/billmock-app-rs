@@ -59,6 +59,8 @@ pub fn hardware_init_0v2(
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
 
+    let async_input_event_ch = shared_resource.async_input_event_ch.channel;
+
     // 2023-08-17 , PA0 (Start1P Port out is not used anymore)
 
     Hardware {
@@ -75,7 +77,7 @@ pub fn hardware_init_0v2(
                     p.EXTI14.degrade(),                       // EXTI14
                 ),
                 InputPortKind::StartJam1P,
-                &shared_resource.async_input_event_ch,
+                async_input_event_ch,
                 &shared_resource.arcade_players_timing[PLAYER_1_INDEX],
             ),
             VendSideBill::new(
@@ -90,7 +92,7 @@ pub fn hardware_init_0v2(
                     p.EXTI11.degrade(),                       // EXTI11
                 ),
                 InputPortKind::StartJam2P,
-                &shared_resource.async_input_event_ch,
+                async_input_event_ch,
                 &shared_resource.arcade_players_timing[PLAYER_2_INDEX],
             ),
         ],
@@ -105,7 +107,7 @@ pub fn hardware_init_0v2(
                 Output::new(p.PD2.degrade(), Level::Low, Speed::Low), // VIRT0_VND
                 Output::new(p.PB9.degrade(), Level::Low, Speed::Low), // VIRT0_JAM
                 Output::new(p.PB3.degrade(), Level::Low, Speed::Low), // VIRT0_STR
-                &shared_resource.async_input_event_ch,
+                async_input_event_ch,
                 &shared_resource.arcade_players_timing[PLAYER_1_INDEX],
             ),
             HostSideBill::new(
@@ -118,7 +120,7 @@ pub fn hardware_init_0v2(
                 Output::new(p.PC13.degrade(), Level::Low, Speed::Low), // VIRT1_VND
                 Output::new(p.PB8.degrade(), Level::Low, Speed::Low), // VIRT1_JAM
                 Output::new(p.PB5.degrade(), Level::Low, Speed::Low), // VIRT1_STR
-                &shared_resource.async_input_event_ch,
+                async_input_event_ch,
                 &shared_resource.arcade_players_timing[PLAYER_2_INDEX],
             ),
         ],
