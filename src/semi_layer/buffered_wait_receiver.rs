@@ -78,4 +78,14 @@ impl BufferedWaitReceiver {
     pub fn get_cache(&self) -> u16 {
         self.bit_cache.lock(|x| *x)
     }
+
+    #[allow(dead_code)]
+    pub fn get_cache_optional(&self, other: u16) -> Option<u16> {
+        let me = self.get_cache();
+        if me == other {
+            None
+        } else {
+            Some(me)
+        }
+    }
 }
