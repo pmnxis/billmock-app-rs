@@ -258,11 +258,11 @@ impl BufferedOpenDrain {
                 (Some(wait_ms), false) => {
                     with_timeout(
                         Duration::from_millis(wait_ms.into()),
-                        self.channel_hsm.recv(),
+                        self.channel_hsm.receive(),
                     )
                     .await
                 }
-                (None, false) => Ok(self.channel_hsm.recv().await),
+                (None, false) => Ok(self.channel_hsm.receive().await),
                 // Not allowed in busy, that means not-interruptable
                 (Some(wait_ms), true) => {
                     Timer::after(Duration::from_millis(wait_ms.into())).await;

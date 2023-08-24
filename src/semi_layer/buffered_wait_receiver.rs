@@ -8,7 +8,7 @@ use bit_field::BitField;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::channel::Channel;
-use embassy_sync::channel::TryRecvError;
+use embassy_sync::channel::TryReceiveError;
 
 use super::buffered_wait::{InputEventChannel, InputEventKind, RawInputEvent};
 
@@ -26,8 +26,8 @@ impl BufferedWaitReceiver {
         }
     }
 
-    pub fn try_recv(&'static self) -> Result<RawInputEvent, TryRecvError> {
-        let received = self.channel.try_recv()?;
+    pub fn try_receive(&'static self) -> Result<RawInputEvent, TryReceiveError> {
+        let received = self.channel.try_receive()?;
         let event = InputEventKind::from(received.event);
 
         let port_num = received.port as usize;
@@ -52,7 +52,7 @@ impl BufferedWaitReceiver {
 
     #[allow(dead_code)]
     pub async fn recv(&'static self) -> RawInputEvent {
-        let received = self.channel.recv().await;
+        let received = self.channel.receive().await;
         let event = InputEventKind::from(received.event);
 
         let port_num = received.port as usize;

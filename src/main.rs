@@ -8,6 +8,7 @@
 #![no_std]
 #![feature(const_trait_impl)]
 #![feature(type_alias_impl_trait)]
+#![feature(effects)] // see : https://github.com/rust-lang/rust/issues/114808
 
 mod application;
 mod boards;

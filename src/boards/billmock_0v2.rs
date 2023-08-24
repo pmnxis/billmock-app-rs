@@ -31,12 +31,15 @@ bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
 });
 
+static mut USART2_RX_BUF: [u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE] =
+    [0u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE];
+
 pub fn hardware_init_0v2(
     p: embassy_stm32::Peripherals,
     shared_resource: &'static SharedResource,
 ) -> Hardware {
     // USART2 initialization for CardReaderDevice
-    let usart2_rx_buf = make_static!([0u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE]);
+    let usart2_rx_buf = unsafe { &mut USART2_RX_BUF };
 
     let usart2_config = {
         let mut ret = UsartConfig::default();
