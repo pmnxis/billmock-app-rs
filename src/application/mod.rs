@@ -47,7 +47,7 @@ impl Application {
                 }
             };
 
-            if let Some(x) = hardware.card_reader.channel.try_recv().ok() {
+            if let Ok(x) = hardware.card_reader.channel.try_recv() {
                 PaymentReceive::from((default_serial, x))
                     .override_player_by_duration()
                     .apply_output(board)
@@ -56,8 +56,7 @@ impl Application {
                 // todo! - ACK pass to TX
             }
 
-            // if let Some(x) = async_input_event_ch.get_cache_optional(input_backup) {
-            if let Some(raw_input_event) = async_input_event_ch.try_recv().ok() {
+            if let Ok(raw_input_event) = async_input_event_ch.try_recv() {
                 let input_bits = async_input_event_ch.get_cache();
                 defmt::info!("Input cache state changed : {:04X}", input_bits);
 
