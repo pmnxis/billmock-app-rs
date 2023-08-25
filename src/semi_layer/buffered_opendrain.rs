@@ -519,10 +519,10 @@ impl BufferedOpenDrain {
     }
 }
 
-// in HW v0.2 pool usage would be 13.
-// PCB has 13 N-MOS open-drain.
-// single task pool consume 112 bytes
-#[embassy_executor::task(pool_size = 13)]
+// in HW v0.2 pool usage would be 13, but latest BSP only allow 12 output.
+// in HW v0.3 pool usage would be 12. PCB has 12 N-MOS open-drain.
+// single task pool consume 120 bytes
+#[embassy_executor::task(pool_size = 12)]
 pub async fn buffered_opendrain_spawn(instance: &'static BufferedOpenDrain) {
     instance.run().await
 }
