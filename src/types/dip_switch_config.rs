@@ -111,6 +111,17 @@ impl InhibitOverride {
     }
 }
 
+impl defmt::Format for InhibitOverride {
+    fn format(&self, fmt: defmt::Formatter) {
+        match self {
+            InhibitOverride::Normal => defmt::write!(fmt, "Normal"),
+            InhibitOverride::ForceInhibit1P => defmt::write!(fmt, "ForceInhibit1P"),
+            InhibitOverride::ForceInhibit2P => defmt::write!(fmt, "ForceInhibit2P"),
+            InhibitOverride::ForceInhibitGlobal => defmt::write!(fmt, "ForceInhibitGlobal"),
+        }
+    }
+}
+
 /// ## Timing dip switch configuration used in HW spec 0.2 and 0.3
 ///
 /// | TIMING0 (`3`) | TIMING1 (`4`) | Configuration                 |
@@ -169,6 +180,17 @@ impl TimingOverride {
     }
 }
 
+impl defmt::Format for TimingOverride {
+    fn format(&self, fmt: defmt::Formatter) {
+        match self {
+            TimingOverride::PulseTimingAuto => defmt::write!(fmt, "PulseTimingAuto"),
+            TimingOverride::PulseTiming50Millis => defmt::write!(fmt, "PulseTiming50Millis"),
+            TimingOverride::PulseTiming100Millis => defmt::write!(fmt, "PulseTiming100Millis"),
+            TimingOverride::PulseTiming200Millis => defmt::write!(fmt, "PulseTiming200Millis"),
+        }
+    }
+}
+
 /// ## Application mode dip switch configuration used in HW spec 0.2 [DEPRECATED]
 ///
 /// | MODE0 (`5`)   | MODE1 (`6`)   | Configuration                 |
@@ -218,4 +240,19 @@ pub enum AppMode0V3 {
     /// Bypass JAM (swapped logically). JAM signal bypass to host(game pcb) side output.
     /// And independent of swapping signal, extra serial port is forcely bind to 2P output, default port to 1P
     BypassJamAndExtraSerialPayment = 3,
+}
+
+impl defmt::Format for AppMode0V3 {
+    fn format(&self, fmt: defmt::Formatter) {
+        match self {
+            AppMode0V3::BypassStart => defmt::write!(fmt, "BypassStart"),
+            AppMode0V3::StartButtonDecideSerialToVend => {
+                defmt::write!(fmt, "StartButtonDecideSerialToVend")
+            }
+            AppMode0V3::BypassJam => defmt::write!(fmt, "BypassJam"),
+            AppMode0V3::BypassJamAndExtraSerialPayment => {
+                defmt::write!(fmt, "BypassJamAndExtraSerialPayment")
+            }
+        }
+    }
 }

@@ -53,6 +53,7 @@ impl Application {
             // Timing Override
             if timing_flag != timing {
                 let new_timing = timing_flag.get_toggle_timing();
+                defmt::info!("Timing status chagned : {}", timing_flag);
 
                 shared.arcade_players_timing[PLAYER_1_INDEX].set(new_timing);
                 shared.arcade_players_timing[PLAYER_2_INDEX].set(new_timing);

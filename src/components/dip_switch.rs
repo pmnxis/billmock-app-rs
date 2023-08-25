@@ -47,14 +47,12 @@ impl DipSwitch {
     pub fn read(&self) -> (InhibitOverride, TimingOverride, AppMode0V3) {
         (
             InhibitOverride::try_from(
-                self.gpios.0.is_high() as u8 + self.gpios.1.is_high() as u8 * 2,
+                self.gpios.0.is_low() as u8 + self.gpios.1.is_low() as u8 * 2,
             )
             .unwrap(),
-            TimingOverride::try_from(
-                self.gpios.2.is_high() as u8 + self.gpios.3.is_high() as u8 * 2,
-            )
-            .unwrap(),
-            AppMode0V3::try_from(self.gpios.4.is_high() as u8 + self.gpios.5.is_high() as u8 * 2)
+            TimingOverride::try_from(self.gpios.2.is_low() as u8 + self.gpios.3.is_low() as u8 * 2)
+                .unwrap(),
+            AppMode0V3::try_from(self.gpios.4.is_low() as u8 + self.gpios.5.is_low() as u8 * 2)
                 .unwrap(),
         )
     }
