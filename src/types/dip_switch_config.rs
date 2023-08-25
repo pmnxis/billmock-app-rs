@@ -81,8 +81,8 @@ impl InhibitOverride {
         let masked = (self_u8 ^ previous_u8) & self_u8;
 
         (
-            masked.get_bit(PLAYER_1_INDEX) as bool,
-            masked.get_bit(PLAYER_2_INDEX) as bool,
+            masked.get_bit(PLAYER_1_INDEX),
+            masked.get_bit(PLAYER_2_INDEX),
         )
     }
 
@@ -92,8 +92,8 @@ impl InhibitOverride {
         let masked = (self_u8 ^ previous_u8) & ((!self_u8) & ((1 << PLAYER_INDEX_MAX) - 1));
 
         (
-            masked.get_bit(PLAYER_1_INDEX) as bool,
-            masked.get_bit(PLAYER_2_INDEX) as bool,
+            masked.get_bit(PLAYER_1_INDEX),
+            masked.get_bit(PLAYER_2_INDEX),
         )
     }
 
@@ -103,10 +103,12 @@ impl InhibitOverride {
         let masked = self_u8 ^ previous_u8;
 
         (
-            (masked.get_bit(PLAYER_1_INDEX) as bool)
-                .then_some(self_u8.get_bit(PLAYER_1_INDEX) as bool),
-            (masked.get_bit(PLAYER_2_INDEX) as bool)
-                .then_some(self_u8.get_bit(PLAYER_2_INDEX) as bool),
+            masked
+                .get_bit(PLAYER_1_INDEX)
+                .then_some(self_u8.get_bit(PLAYER_1_INDEX)),
+            masked
+                .get_bit(PLAYER_2_INDEX)
+                .then_some(self_u8.get_bit(PLAYER_2_INDEX)),
         )
     }
 }
@@ -177,6 +179,10 @@ impl TimingOverride {
                 low_ms: 200,
             },
         }
+    }
+
+    pub const fn is_override_force(&self) -> bool {
+        !matches!(self, Self::PulseTimingAuto)
     }
 }
 

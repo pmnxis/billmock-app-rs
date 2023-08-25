@@ -126,8 +126,8 @@ impl InputEvent {
         }
     }
 
-    pub async fn apply_output(&self, board: &'static Board) -> Self {
-        io_bypass(board, self).await;
+    pub async fn apply_output(&self, board: &'static Board, override_druation_force: bool) -> Self {
+        io_bypass(board, self, override_druation_force).await;
         *self
     }
 }

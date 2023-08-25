@@ -69,8 +69,7 @@ impl Application {
                 if let Some(x) = changed.0 {
                     let io_status = async_input_event_ch
                         .get_cache()
-                        .get_bit(usize::from(InputPortKind::Inhibit1P as u8))
-                        as bool;
+                        .get_bit(usize::from(InputPortKind::Inhibit1P as u8));
 
                     hardware.vend_sides[PLAYER_1_INDEX]
                         .out_inhibit
@@ -81,8 +80,8 @@ impl Application {
                 if let Some(x) = changed.1 {
                     let io_status = async_input_event_ch
                         .get_cache()
-                        .get_bit(usize::from(InputPortKind::Inhibit2P as u8))
-                        as bool;
+                        .get_bit(usize::from(InputPortKind::Inhibit2P as u8));
+
                     hardware.vend_sides[PLAYER_2_INDEX]
                         .out_inhibit
                         .set_level(x | io_status)
@@ -96,7 +95,7 @@ impl Application {
             if let Ok(x) = hardware.card_reader.channel.try_receive() {
                 PaymentReceive::from((default_serial, x))
                     .override_player_by_duration()
-                    .apply_output(board)
+                    .apply_output(board, timing.is_override_force())
                     .await;
 
                 // todo! - ACK pass to TX
@@ -130,7 +129,7 @@ impl Application {
                                 &[InputPortKind::Inhibit1P, InputPortKind::Inhibit2P]
                             }
                         })
-                        .apply_output(board)
+                        .apply_output(board, timing.is_override_force())
                         .await;
                     }
                     Err(e) => {
