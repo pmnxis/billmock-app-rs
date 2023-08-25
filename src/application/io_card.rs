@@ -79,7 +79,7 @@ impl PaymentReceive {
                 player: None,
                 price: None,
                 signal_count: Some(c),
-                pulse_duration: Some(_d),
+                pulse_duration: Some(d),
             }) => {
                 match self.origin {
                     Player::Player1 => host_1p,
@@ -87,7 +87,7 @@ impl PaymentReceive {
                     _ => host_1p,
                 }
                 .out_vend
-                .tick_tock(c.min(u8::MAX.into()) as u8)
+                .alt_tick_tock(c.min(u8::MAX.into()) as u8, d, d)
                 .await;
             }
             GenericPaymentRecv::Income(GenericIncomeInfo {

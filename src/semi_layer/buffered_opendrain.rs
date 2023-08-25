@@ -134,6 +134,9 @@ const BF_13_8_SET_HIGH: u16 = 0b00_0001;
 const BF_13_8_TICKTOCK: u16 = 0b00_0010;
 const BF_13_8_FOREVER_BLINK: u16 = 0b00_0011;
 
+const BF_U5_MAX: u16 = (1u16 << 5) - 1;
+const BF_U7_MAX: u16 = (1u16 << 7) - 1;
+
 pub struct RawBufferedOpenDrainRequestTryIntoError {
     pub inner: RawBufferedOpenDrainRequest,
 }
@@ -186,7 +189,7 @@ impl From<&BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
         match value {
             BufferedOpenDrainRequest::SetLow => BF_13_8_SET_LOW << 8,
             BufferedOpenDrainRequest::SetHigh => BF_13_8_SET_HIGH << 8,
-            BufferedOpenDrainRequest::TickTock(x) => *x as u16 + (BF_13_8_TICKTOCK << 8),
+            BufferedOpenDrainRequest::TickTock(x) => *x as u16 | (BF_13_8_TICKTOCK << 8),
             BufferedOpenDrainRequest::AltTickTock(AltTickTockRequest {
                 toggle_count,
                 timing: ToggleTiming { high_ms, low_ms },
@@ -194,15 +197,15 @@ impl From<&BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
                 let mut ret = 0u16;
                 *ret.set_bits(14..=15, BF_15_14_ALT_TICKTOCK)
                     .set_bits(10..=13, *toggle_count as u16)
-                    .set_bits(5..=9, (*high_ms / 10).min(1 << 5))
-                    .set_bits(0..=4, (*low_ms / 10).min(1 << 5))
+                    .set_bits(5..=9, (*high_ms / 10).min(BF_U5_MAX))
+                    .set_bits(0..=4, (*low_ms / 10).min(BF_U5_MAX))
             }
             BufferedOpenDrainRequest::ForeverBlink => BF_13_8_FOREVER_BLINK << 8,
             BufferedOpenDrainRequest::AltForeverBlink(ToggleTiming { high_ms, low_ms }) => {
                 let mut ret = 0u16;
                 *ret.set_bits(14..=15, BF_15_14_ALT_FOREVER_BLINK)
-                    .set_bits(7..=13, (*high_ms / 10).min(1 << 7))
-                    .set_bits(0..=6, (*low_ms / 10).min(1 << 7))
+                    .set_bits(7..=13, (*high_ms / 10).min(BF_U7_MAX))
+                    .set_bits(0..=6, (*low_ms / 10).min(BF_U7_MAX))
             }
         }
     }
@@ -213,7 +216,7 @@ impl From<BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
         match value {
             BufferedOpenDrainRequest::SetLow => BF_13_8_SET_LOW << 8,
             BufferedOpenDrainRequest::SetHigh => BF_13_8_SET_HIGH << 8,
-            BufferedOpenDrainRequest::TickTock(x) => x as u16 + (BF_13_8_TICKTOCK << 8),
+            BufferedOpenDrainRequest::TickTock(x) => x as u16 | (BF_13_8_TICKTOCK << 8),
             BufferedOpenDrainRequest::AltTickTock(AltTickTockRequest {
                 toggle_count,
                 timing: ToggleTiming { high_ms, low_ms },
@@ -221,15 +224,15 @@ impl From<BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
                 let mut ret = 0u16;
                 *ret.set_bits(14..=15, BF_15_14_ALT_TICKTOCK)
                     .set_bits(10..=13, toggle_count as u16)
-                    .set_bits(5..=9, (high_ms / 10).min(1 << 5))
-                    .set_bits(0..=4, (low_ms / 10).min(1 << 5))
+                    .set_bits(5..=9, (high_ms / 10).min(BF_U5_MAX))
+                    .set_bits(0..=4, (low_ms / 10).min(BF_U5_MAX))
             }
             BufferedOpenDrainRequest::ForeverBlink => BF_13_8_FOREVER_BLINK << 8,
             BufferedOpenDrainRequest::AltForeverBlink(ToggleTiming { high_ms, low_ms }) => {
                 let mut ret = 0u16;
                 *ret.set_bits(14..=15, BF_15_14_ALT_FOREVER_BLINK)
-                    .set_bits(7..=13, (high_ms / 10).min(1 << 7))
-                    .set_bits(0..=6, (low_ms / 10).min(1 << 7))
+                    .set_bits(7..=13, (high_ms / 10).min(BF_U7_MAX))
+                    .set_bits(0..=6, (low_ms / 10).min(BF_U7_MAX))
             }
         }
     }
