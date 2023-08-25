@@ -11,7 +11,7 @@ use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait, InputEventChannel};
-use crate::semi_layer::timing::DualPoleToggleTiming;
+use crate::semi_layer::timing::SharedToggleTiming;
 use crate::types::const_convert::ConstInto;
 use crate::types::input_port::InputPortKind;
 
@@ -32,14 +32,14 @@ impl HostSideBill {
         out_jam: Output<'static, AnyPin>,
         out_start: Output<'static, AnyPin>,
         mpsc_ch: &'static InputEventChannel,
-        timing: &'static DualPoleToggleTiming,
+        shared_timing: &'static SharedToggleTiming,
     ) -> Self {
         Self {
             in_inhibit: BufferedWait::new(in_inhibit, in_inhibit_event.const_into(), mpsc_ch),
-            out_busy: BufferedOpenDrain::new(out_busy, timing),
-            out_vend: BufferedOpenDrain::new(out_vend, timing),
-            out_jam: BufferedOpenDrain::new(out_jam, timing),
-            out_start: BufferedOpenDrain::new(out_start, timing),
+            out_busy: BufferedOpenDrain::new(out_busy, shared_timing),
+            out_vend: BufferedOpenDrain::new(out_vend, shared_timing),
+            out_jam: BufferedOpenDrain::new(out_jam, shared_timing),
+            out_start: BufferedOpenDrain::new(out_start, shared_timing),
         }
     }
 

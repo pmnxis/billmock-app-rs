@@ -19,7 +19,7 @@ use crate::components::serial_device::{self, card_reader_device_spawn, CardReade
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use crate::semi_layer::buffered_wait_receiver::BufferedWaitReceiver;
-use crate::semi_layer::timing::{DualPoleToggleTiming, SharedToggleTiming, ToggleTiming};
+use crate::semi_layer::timing::{SharedToggleTiming, ToggleTiming};
 use crate::types::input_port::InputPortKind;
 
 pub const PLAYER_INDEX_MAX: usize = 2;
@@ -135,10 +135,10 @@ pub struct SharedResource {
     pub async_input_event_ch: BufferedWaitReceiver,
 
     /// Open-drain signal timing that shared or const-ish
-    pub arcade_players_timing: [DualPoleToggleTiming; PLAYER_INDEX_MAX],
+    pub arcade_players_timing: [SharedToggleTiming; PLAYER_INDEX_MAX],
 
     /// LED and start button LED related timing that shared or const-ish.
-    pub indicator_timing: DualPoleToggleTiming,
+    pub indicator_timing: SharedToggleTiming,
 }
 
 impl SharedResource {
@@ -150,20 +150,11 @@ impl SharedResource {
     fn init() -> Self {
         Self {
             async_input_event_ch: BufferedWaitReceiver::new(),
-            arcade_players_timing: [
-                DualPoleToggleTiming::new(SharedToggleTiming::default(), ToggleTiming::default()),
-                DualPoleToggleTiming::new(SharedToggleTiming::default(), ToggleTiming::default()),
-            ],
-            indicator_timing: DualPoleToggleTiming::new(
-                SharedToggleTiming::new_custom(ToggleTiming {
-                    high_ms: 500,
-                    low_ms: 500,
-                }),
-                ToggleTiming {
-                    high_ms: 1000,
-                    low_ms: 1000,
-                },
-            ),
+            arcade_players_timing: [SharedToggleTiming::default(), SharedToggleTiming::default()],
+            indicator_timing: SharedToggleTiming::new_custom(ToggleTiming {
+                high_ms: 500,
+                low_ms: 500,
+            }),
         }
     }
 }

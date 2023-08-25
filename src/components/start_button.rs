@@ -11,7 +11,7 @@ use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait, InputEventChannel};
-use crate::semi_layer::timing::DualPoleToggleTiming;
+use crate::semi_layer::timing::SharedToggleTiming;
 use crate::types::const_convert::ConstInto;
 use crate::types::input_port::InputPortKind;
 
@@ -29,11 +29,11 @@ impl StartButton {
         in_switch_event: InputPortKind,
         out_led: Output<'static, AnyPin>,
         mpsc_ch: &'static InputEventChannel,
-        timing: &'static DualPoleToggleTiming,
+        shared_timing: &'static SharedToggleTiming,
     ) -> Self {
         Self {
             in_switch: BufferedWait::new(in_switch, in_switch_event.const_into(), mpsc_ch),
-            out_led: BufferedOpenDrain::new(out_led, timing),
+            out_led: BufferedOpenDrain::new(out_led, shared_timing),
         }
     }
 

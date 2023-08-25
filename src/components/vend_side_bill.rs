@@ -11,7 +11,7 @@ use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait, InputEventChannel};
-use crate::semi_layer::timing::DualPoleToggleTiming;
+use crate::semi_layer::timing::SharedToggleTiming;
 use crate::types::const_convert::ConstInto;
 use crate::types::input_port::InputPortKind;
 
@@ -29,10 +29,10 @@ impl VendSideBill {
         in_start_jam: ExtiInput<'static, AnyPin>,
         in_start_jam_event: InputPortKind,
         mpsc_ch: &'static InputEventChannel,
-        timing: &'static DualPoleToggleTiming,
+        shared_timing: &'static SharedToggleTiming,
     ) -> VendSideBill {
         Self {
-            out_inhibit: BufferedOpenDrain::new(out_inhibit, timing),
+            out_inhibit: BufferedOpenDrain::new(out_inhibit, shared_timing),
             in_vend: BufferedWait::new(in_vend, in_vend_event.const_into(), mpsc_ch),
             in_start_jam: BufferedWait::new(in_start_jam, in_start_jam_event.const_into(), mpsc_ch),
         }

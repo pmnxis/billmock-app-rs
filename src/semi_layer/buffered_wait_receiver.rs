@@ -12,7 +12,6 @@ use embassy_sync::channel::TryReceiveError;
 
 use super::buffered_wait::{InputEventChannel, InputEventKind, RawInputEvent};
 
-// #[allow(unused)]
 pub struct BufferedWaitReceiver {
     pub channel: InputEventChannel,
     bit_cache: Mutex<ThreadModeRawMutex, u16>,
