@@ -4,7 +4,11 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
+use bit_field::BitField;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+
+use crate::boards::{PLAYER_1_INDEX, PLAYER_2_INDEX, PLAYER_INDEX_MAX};
+use crate::semi_layer::timing::ToggleTiming;
 
 // Dip Switch spec
 // DipSwitch was assigned as Price/Timing/Mode0v2 in hardware 0.2 spec.
@@ -52,18 +56,59 @@ pub enum PriceReflection {
 ///  if inhibit is enabled on the host game I/O side, inhibit for each player is activated.
 /// - This Inhibit DIP Switch setting can be used to prohibit currency acquisition
 ///  of a device that has under the maintenance in the field engineer.
-#[derive(TryFromPrimitive, IntoPrimitive)]
+#[derive(TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, Copy, Clone)]
 #[repr(u8)]
 #[allow(dead_code)]
 pub enum InhibitOverride {
     /// `00` : default value
-    Normal,
+    Normal = 0b00,
     /// `01` : Override 1P inhibit
-    ForceInhibit1P,
+    ForceInhibit1P = 0b01,
     /// `10` : Override 2P inhibit
-    ForceInhibit2P,
+    ForceInhibit2P = 0b10,
     /// `11` : Override global inhibit (1P/2P)
-    ForceInhibitGlobal,
+    ForceInhibitGlobal = 0b11,
+}
+
+impl InhibitOverride {
+    pub const fn default() -> Self {
+        Self::Normal
+    }
+
+    pub fn check_new_inhibited(&self, previous: &Self) -> (bool, bool) {
+        let self_u8: u8 = *self as u8;
+        let previous_u8 = *previous as u8;
+        let masked = (self_u8 ^ previous_u8) & self_u8;
+
+        (
+            masked.get_bit(PLAYER_1_INDEX) as bool,
+            masked.get_bit(PLAYER_2_INDEX) as bool,
+        )
+    }
+
+    pub fn check_new_released(&self, previous: &Self) -> (bool, bool) {
+        let self_u8 = *self as u8;
+        let previous_u8 = *previous as u8;
+        let masked = (self_u8 ^ previous_u8) & ((!self_u8) & ((1 << PLAYER_INDEX_MAX) - 1));
+
+        (
+            masked.get_bit(PLAYER_1_INDEX) as bool,
+            masked.get_bit(PLAYER_2_INDEX) as bool,
+        )
+    }
+
+    pub fn check_changed(&self, previous: &Self) -> (Option<bool>, Option<bool>) {
+        let self_u8 = *self as u8;
+        let previous_u8 = *previous as u8;
+        let masked = self_u8 ^ previous_u8;
+
+        (
+            (masked.get_bit(PLAYER_1_INDEX) as bool)
+                .then_some(self_u8.get_bit(PLAYER_1_INDEX) as bool),
+            (masked.get_bit(PLAYER_2_INDEX) as bool)
+                .then_some(self_u8.get_bit(PLAYER_2_INDEX) as bool),
+        )
+    }
 }
 
 /// ## Timing dip switch configuration used in HW spec 0.2 and 0.3
@@ -82,7 +127,7 @@ pub enum InhibitOverride {
 ///
 /// - Timing SW `01`, `10`, `11` ignores the pulse duration of all signal sources and
 ///  fixes it to one of 50 mS, 100 mS, and 200 mS and outputs it.
-#[derive(TryFromPrimitive, IntoPrimitive)]
+#[derive(TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd)]
 #[repr(u8)]
 #[allow(dead_code)]
 pub enum TimingOverride {
@@ -98,6 +143,30 @@ pub enum TimingOverride {
     PulseTiming100Millis = 2,
     /// Ignores the pulse duration of all signal sources and fixes it to 200 milli seconds.
     PulseTiming200Millis = 3,
+}
+
+impl TimingOverride {
+    pub const fn default() -> Self {
+        Self::PulseTimingAuto
+    }
+
+    pub const fn get_toggle_timing(&self) -> ToggleTiming {
+        match self {
+            Self::PulseTimingAuto => ToggleTiming::default(),
+            Self::PulseTiming50Millis => ToggleTiming {
+                high_ms: 50,
+                low_ms: 50,
+            },
+            Self::PulseTiming100Millis => ToggleTiming {
+                high_ms: 100,
+                low_ms: 100,
+            },
+            Self::PulseTiming200Millis => ToggleTiming {
+                high_ms: 200,
+                low_ms: 200,
+            },
+        }
+    }
 }
 
 /// ## Application mode dip switch configuration used in HW spec 0.2 [DEPRECATED]
