@@ -12,7 +12,7 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{with_timeout, Duration, Instant, Timer};
 
-use super::timing::{DualPoleToggleTiming, ToggleTiming};
+use super::timing::{SharedToggleTiming, ToggleTiming};
 
 pub const HOST_SIDE_INTERFACE_CH_SIZE: usize = 2;
 pub type OpenDrainRequestChannel =
@@ -275,32 +275,32 @@ impl From<MicroHsm> for BufferedOpenDrainRequest {
     }
 }
 
-impl From<(BufferedOpenDrainRequest, &'static DualPoleToggleTiming)> for MicroHsm {
-    fn from((req, timing): (BufferedOpenDrainRequest, &'static DualPoleToggleTiming)) -> Self {
+impl From<(BufferedOpenDrainRequest, &'static SharedToggleTiming)> for MicroHsm {
+    fn from((req, shared): (BufferedOpenDrainRequest, &'static SharedToggleTiming)) -> Self {
         match req {
             BufferedOpenDrainRequest::SetLow => Self::SetLow,
             BufferedOpenDrainRequest::SetHigh => Self::SetHigh,
             BufferedOpenDrainRequest::TickTock(x) => Self::TickTock(NanoFsm {
                 toggle_count: x,
                 state: true,
-                duration: timing.shared.get().high_ms,
+                duration: shared.get().high_ms,
             }),
             BufferedOpenDrainRequest::AltTickTock(x) => Self::AltTickTock(
                 NanoFsm {
                     toggle_count: x.toggle_count,
                     state: true,
-                    duration: timing.alt.high_ms,
+                    duration: x.timing.high_ms,
                 },
                 x.timing,
             ),
             BufferedOpenDrainRequest::ForeverBlink => Self::ForeverBlink(BlinkFsm {
                 state: true,
-                duration: timing.shared.get().high_ms,
+                duration: shared.get().high_ms,
             }),
             BufferedOpenDrainRequest::AltForeverBlink(x) => Self::AltForeverBlink(
                 BlinkFsm {
                     state: true,
-                    duration: timing.alt.high_ms,
+                    duration: x.high_ms,
                 },
                 x,
             ),
@@ -309,19 +309,17 @@ impl From<(BufferedOpenDrainRequest, &'static DualPoleToggleTiming)> for MicroHs
 }
 
 impl MicroHsm {
-    pub fn next(&self, timing: &'static DualPoleToggleTiming, elapsed: u16) -> Self {
+    pub fn next(&self, shared: &'static SharedToggleTiming, elapsed: u16) -> Self {
         match self {
             Self::SetLow => Self::SetLow,
             Self::SetHigh => Self::SetHigh,
             Self::TickTock(fsm) => fsm
-                .try_substract(timing.shared.get(), elapsed)
+                .try_substract(shared.get(), elapsed)
                 .map_or(Self::default(), Self::TickTock),
             Self::AltTickTock(fsm, builtin_timing) => fsm
                 .try_substract(*builtin_timing, elapsed)
                 .map_or(Self::default(), |f| Self::AltTickTock(f, *builtin_timing)),
-            Self::ForeverBlink(fsm) => {
-                Self::ForeverBlink(fsm.substract(timing.shared.get(), elapsed))
-            }
+            Self::ForeverBlink(fsm) => Self::ForeverBlink(fsm.substract(shared.get(), elapsed)),
             Self::AltForeverBlink(fsm, builtin_timing) => {
                 Self::AltForeverBlink(fsm.substract(*builtin_timing, elapsed), *builtin_timing)
             }
@@ -358,7 +356,7 @@ impl MicroHsm {
 
 pub struct BufferedOpenDrain {
     io: UnsafeCell<Output<'static, AnyPin>>,
-    timing: &'static DualPoleToggleTiming,
+    shared_timing: &'static SharedToggleTiming,
     channel_hsm: OpenDrainRequestChannel,
 }
 
@@ -372,11 +370,11 @@ impl BufferedOpenDrain {
 
     pub const fn new(
         out_pin: Output<'static, AnyPin>,
-        timing: &'static DualPoleToggleTiming,
+        shared_timing: &'static SharedToggleTiming,
     ) -> Self {
         Self {
             io: UnsafeCell::new(out_pin),
-            timing,
+            shared_timing,
             channel_hsm: Channel::new(),
         }
     }
@@ -408,7 +406,7 @@ impl BufferedOpenDrain {
 
                     let elapsed = (Instant::now() - last).as_millis().min(u16::MAX.into()) as u16;
 
-                    hsm = hsm.next(self.timing, elapsed);
+                    hsm = hsm.next(self.shared_timing, elapsed);
                     self.reflect_on_io(&hsm);
 
                     continue;
@@ -428,11 +426,11 @@ impl BufferedOpenDrain {
                 )
             }) {
                 Some(y) => {
-                    hsm = (y, self.timing).into();
+                    hsm = (y, self.shared_timing).into();
                 }
                 None => {
                     let elapsed = (Instant::now() - last).as_millis().min(u16::MAX.into()) as u16;
-                    hsm = hsm.next(self.timing, elapsed);
+                    hsm = hsm.next(self.shared_timing, elapsed);
                 }
             }
 

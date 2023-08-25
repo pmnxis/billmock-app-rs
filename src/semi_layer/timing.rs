@@ -51,17 +51,3 @@ impl SharedToggleTiming {
 // Required to allow static SharedToggleTiming
 // see : https://docs.rust-embedded.org/book/concurrency/#abstractions-send-and-sync
 unsafe impl Sync for SharedToggleTiming {}
-
-pub struct DualPoleToggleTiming {
-    /// shared toggle timing, but not guaranteed ordering and something else.
-    pub shared: SharedToggleTiming,
-    /// prefer const-ish value (todo tided on const only)
-    /// alt field is not allowed modification on runtime.
-    pub alt: ToggleTiming,
-}
-
-impl DualPoleToggleTiming {
-    pub const fn new(shared: SharedToggleTiming, alt: ToggleTiming) -> DualPoleToggleTiming {
-        Self { shared, alt }
-    }
-}
