@@ -12,8 +12,10 @@ use embassy_stm32::gpio::{AnyPin, Output};
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
 use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait, InputEventChannel};
 use crate::semi_layer::timing::SharedToggleTiming;
+use crate::types::buffered_opendrain_kind::BufferedOpenDrainKind;
 use crate::types::const_convert::ConstInto;
 use crate::types::input_port::InputPortKind;
+use crate::types::player::Player;
 
 pub struct VendSideBill {
     pub out_inhibit: BufferedOpenDrain,
@@ -23,6 +25,7 @@ pub struct VendSideBill {
 
 impl VendSideBill {
     pub const fn new(
+        player: Player,
         out_inhibit: Output<'static, AnyPin>,
         in_vend: ExtiInput<'static, AnyPin>,
         in_vend_event: InputPortKind,
@@ -31,8 +34,10 @@ impl VendSideBill {
         mpsc_ch: &'static InputEventChannel,
         shared_timing: &'static SharedToggleTiming,
     ) -> VendSideBill {
+        let vend_str: &'static str = BufferedOpenDrainKind::VendSideInhibit(player).const_str();
+
         Self {
-            out_inhibit: BufferedOpenDrain::new(out_inhibit, shared_timing),
+            out_inhibit: BufferedOpenDrain::new(out_inhibit, shared_timing, vend_str),
             in_vend: BufferedWait::new(in_vend, in_vend_event.const_into(), mpsc_ch),
             in_start_jam: BufferedWait::new(in_start_jam, in_start_jam_event.const_into(), mpsc_ch),
         }

@@ -361,24 +361,31 @@ pub struct BufferedOpenDrain {
     io: UnsafeCell<Output<'static, AnyPin>>,
     shared_timing: &'static SharedToggleTiming,
     channel_hsm: OpenDrainRequestChannel,
+
+    /// only use for debug print
+    #[cfg(debug_assertions)]
+    debug_name: &'static str,
 }
 
 #[allow(unused)]
 impl BufferedOpenDrain {
     fn reflect_on_io(&self, hsm: &MicroHsm) {
         let io = unsafe { &mut *self.io.get() };
-
+        defmt::info!("OUT[] : {}", hsm.expect_output_pin_state() as bool);
         io.set_level(hsm.expect_output_pin_state().into());
     }
 
     pub const fn new(
         out_pin: Output<'static, AnyPin>,
         shared_timing: &'static SharedToggleTiming,
+        debug_name: &'static str,
     ) -> Self {
         Self {
             io: UnsafeCell::new(out_pin),
             shared_timing,
             channel_hsm: Channel::new(),
+            #[cfg(debug_assertions)]
+            debug_name,
         }
     }
 
