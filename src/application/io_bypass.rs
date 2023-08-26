@@ -15,7 +15,7 @@ use crate::types::input_port::{InputEvent, InputPortKind};
 //     Player2(u16),
 // }
 
-pub async fn io_bypass(board: &'static Board, event: &InputEvent) {
+pub async fn io_bypass(board: &'static Board, event: &InputEvent, override_druation_force: bool) {
     let output = match board.correspond_output(&event.port) {
         Ok(x) => x,
         Err(e) => {
@@ -31,8 +31,13 @@ pub async fn io_bypass(board: &'static Board, event: &InputEvent) {
         (x, InputEventKind::LongPressed(0) | InputEventKind::LongPressed(1)) => {
             warn!("{:?} too short pressed", x);
         }
-        (InputPortKind::Vend1P | InputPortKind::Vend2P, InputEventKind::LongPressed(_)) => {
-            output.tick_tock(1).await;
+        (InputPortKind::Vend1P | InputPortKind::Vend2P, InputEventKind::LongPressed(x)) => {
+            if override_druation_force {
+                output.tick_tock(1).await;
+            } else {
+                let mul10 = (x as u16) * 10;
+                output.alt_tick_tock(1, mul10, mul10).await;
+            }
         }
         (InputPortKind::StartJam1P | InputPortKind::StartJam2P, _) => {
             // skip

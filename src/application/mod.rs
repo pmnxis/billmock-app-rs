@@ -8,11 +8,12 @@ mod io_bypass;
 mod io_card;
 mod io_remap;
 
+use bit_field::BitField;
 use embassy_futures::yield_now;
 use io_card::PaymentReceive;
 
 use crate::boards::*;
-use crate::types::dip_switch_config::{AppMode0V3, InhibitOverride};
+use crate::types::dip_switch_config::{AppMode0V3, InhibitOverride, TimingOverride};
 use crate::types::input_port::{InputEvent, InputPortKind};
 use crate::types::player::Player;
 
@@ -33,24 +34,81 @@ impl Application {
         let hardware = &self.board.hardware;
         let shared = self.board.shared_resource;
         let async_input_event_ch = &shared.async_input_event_ch;
-
+        let mut timing = TimingOverride::default();
+        let mut inhibit = InhibitOverride::default();
+        let mut appmode = AppMode0V3::default();
+        let mut default_serial = Player::Undefined;
         loop {
             // timing flag would be used in future implemenation.
             // reading dipsw will be changed to actor model
-            let (inhibit_flag, _timing_flag, appmode_flag) = hardware.dipsw.read();
-            let default_serial = match appmode_flag {
-                AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
-                    Player::Undefined
+            let (inhibit_latest, timing_latest, appmode_latest) = hardware.dipsw.read();
+
+            // Inhibit Override
+            if inhibit_latest != inhibit {
+                let changed = inhibit_latest.check_changed(&inhibit);
+                defmt::info!(
+                    "Inhibit status chagned, {}, P1/2 : {:?}",
+                    inhibit_latest,
+                    changed
+                );
+
+                if let Some(x) = changed.0 {
+                    let io_status = async_input_event_ch
+                        .get_cache()
+                        .get_bit(usize::from(InputPortKind::Inhibit1P as u8));
+
+                    hardware.vend_sides[PLAYER_1_INDEX]
+                        .out_inhibit
+                        .set_level(x | io_status)
+                        .await;
+                    // send uart set inhibited
                 }
-                AppMode0V3::BypassJam | AppMode0V3::BypassJamAndExtraSerialPayment => {
-                    Player::Player1
+                if let Some(x) = changed.1 {
+                    let io_status = async_input_event_ch
+                        .get_cache()
+                        .get_bit(usize::from(InputPortKind::Inhibit2P as u8));
+
+                    hardware.vend_sides[PLAYER_2_INDEX]
+                        .out_inhibit
+                        .set_level(x | io_status)
+                        .await;
+                    // send uart set inhibited
                 }
-            };
+
+                inhibit = inhibit_latest;
+            }
+
+            // Timing Override
+            if timing_latest != timing {
+                let new_timing = timing_latest.get_toggle_timing();
+                defmt::info!("Timing status chagned : {}", timing_latest);
+
+                shared.arcade_players_timing[PLAYER_1_INDEX].set(new_timing);
+                shared.arcade_players_timing[PLAYER_2_INDEX].set(new_timing);
+
+                timing = timing_latest;
+            }
+
+            // AppMode setting
+            if appmode_latest != appmode {
+                defmt::info!("App Mode (0v3) status chagned : {}", appmode_latest);
+
+                default_serial = match appmode_latest {
+                    AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
+                        Player::Undefined
+                    }
+                    AppMode0V3::BypassJam | AppMode0V3::BypassJamAndExtraSerialPayment => {
+                        Player::Player1
+                    }
+                };
+
+                appmode = appmode_latest;
+            }
 
             if let Ok(x) = hardware.card_reader.channel.try_receive() {
                 PaymentReceive::from((default_serial, x))
                     .override_player_by_duration()
-                    .apply_output(board)
+                    .apply_output(board, timing.is_override_force())
                     .await;
 
                 // todo! - ACK pass to TX
@@ -62,7 +120,7 @@ impl Application {
 
                 match InputEvent::try_from(raw_input_event) {
                     Ok(y) => {
-                        y.replace_arr(match appmode_flag {
+                        y.replace_arr(match appmode {
                             AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
                                 &[
                                     (InputPortKind::StartJam1P, InputPortKind::Start1P),
@@ -76,7 +134,7 @@ impl Application {
                                 ]
                             }
                         })
-                        .ignore_arr(match inhibit_flag {
+                        .ignore_arr(match inhibit {
                             InhibitOverride::Normal => &[],
                             InhibitOverride::ForceInhibit1P => &[InputPortKind::Inhibit1P],
                             InhibitOverride::ForceInhibit2P => &[InputPortKind::Inhibit2P],
@@ -84,7 +142,7 @@ impl Application {
                                 &[InputPortKind::Inhibit1P, InputPortKind::Inhibit2P]
                             }
                         })
-                        .apply_output(board)
+                        .apply_output(board, timing.is_override_force())
                         .await;
                     }
                     Err(e) => {

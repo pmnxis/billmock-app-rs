@@ -69,7 +69,7 @@ impl PaymentReceive {
         }
     }
 
-    pub async fn apply_output(self, board: &'static Board) -> Self {
+    pub async fn apply_output(self, board: &'static Board, override_druation_force: bool) -> Self {
         let hardware = &board.hardware;
         let host_1p = &hardware.host_sides[PLAYER_1_INDEX];
         let host_2p = &hardware.host_sides[PLAYER_2_INDEX];
@@ -81,14 +81,23 @@ impl PaymentReceive {
                 signal_count: Some(c),
                 pulse_duration: Some(d),
             }) => {
-                match self.origin {
+                let destination = match self.origin {
                     Player::Player1 => host_1p,
                     Player::Player2 => host_2p,
                     _ => host_1p,
+                };
+
+                if override_druation_force {
+                    destination
+                        .out_vend
+                        .tick_tock(c.min(u8::MAX.into()) as u8)
+                        .await;
+                } else {
+                    destination
+                        .out_vend
+                        .alt_tick_tock(c.min(u8::MAX.into()) as u8, d, d)
+                        .await;
                 }
-                .out_vend
-                .alt_tick_tock(c.min(u8::MAX.into()) as u8, d, d)
-                .await;
             }
             GenericPaymentRecv::Income(GenericIncomeInfo {
                 player: Some(p),
