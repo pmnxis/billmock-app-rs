@@ -19,8 +19,8 @@ use crate::semi_layer::timing::ToggleTiming;
 /// | PRICE0 (`1`)  | PRICE1 (`2`)  | Configuration                 |
 /// | :-----------: | :-----------: | ----------------------------- |
 /// | `0`           |  `0`          | Auto                          |
-/// | `0`           |  `1`          | Reserved                      |
-/// | `1`           |  `0`          | Force 1 signal per 500 KRW    |
+/// | `1`           |  `0`          | Reserved                      |
+/// | `0`           |  `1`          | Force 1 signal per 500 KRW    |
 /// | `1`           |  `1`          | Force 1 signal per 1000 KRW   |
 ///
 /// - `10` and `11` : Ignore signal count field comes from serial communication,
@@ -46,8 +46,8 @@ pub enum PriceReflection {
 /// | Inhibit0 (`1`)| Inhibit1P (`2`)| Configuration                   |
 /// | :-----------: | :-----------: | ------------------------------- |
 /// | `0`           |  `0`          | Normal (No force overriding)    |
-/// | `0`           |  `1`          | Override inhibit on 1P as force |
-/// | `1`           |  `0`          | Override inhibit on 2P as force |
+/// | `1`           |  `0`          | Override inhibit on 1P as force |
+/// | `0`           |  `1`          | Override inhibit on 2P as force |
 /// | `1`           |  `1`          | Override inhibit globally       |
 ///
 /// - By override for each player by dip switch setting, regardless of game I/O signal,
@@ -129,8 +129,8 @@ impl defmt::Format for InhibitOverride {
 /// | TIMING0 (`3`) | TIMING1 (`4`) | Configuration                 |
 /// | :-----------: | :-----------: | ----------------------------- |
 /// | `0`           |  `0`          | Auto                          |
-/// | `0`           |  `1`          | Force 50mS active low         |
-/// | `1`           |  `0`          | Force 100mS active low        |
+/// | `1`           |  `0`          | Force 50mS active low         |
+/// | `0`           |  `1`          | Force 100mS active low        |
 /// | `1`           |  `1`          | Force 200mS active low        |
 /// - Timing SW `00` (Auto), for the active-low output signal,
 ///  the pulse duration provided by serial communication or
@@ -202,8 +202,8 @@ impl defmt::Format for TimingOverride {
 /// | MODE0 (`5`)   | MODE1 (`6`)   | Configuration                 |
 /// | :-----------: | :-----------: | ----------------------------- |
 /// | `0`           |  `0`          | Bypass mode (Default)         |
-/// | `0`           |  `1`          | Dual emulation mode           |
-/// | `1`           |  `0`          | Start signal decide vend output direction for payment income from serial communication |
+/// | `1`           |  `0`          | Dual emulation mode           |
+/// | `0`           |  `1`          | Start signal decide vend output direction for payment income from serial communication |
 /// | `1`           |  `1`          | Reserved                      |
 ///
 /// Since this setting is no longer used, a detailed description is omitted.
@@ -222,13 +222,13 @@ pub enum AppMode {
 /// | MODE0 (`5`) | MODE1 (`6`) | Swap status  | Special Feature                                       |
 /// | :---------: | :---------: | ------------ | ----------------------------------------------------- |
 /// | `0`         |  `0`        | Start Signal | No, Start signal bypass to host(game pcb) side output |
-/// | `0`         |  `1`        | Start Signal | Yes, Start signal decide vend output direction for payment income from serial communication |
-/// | `1`         |  `0`        | Jam Signal   | No, Jam signal bypass to jam(game pcb) side output    |
+/// | `1`         |  `0`        | Start Signal | Yes, Start signal decide vend output direction for payment income from serial communication |
+/// | `0`         |  `1`        | Jam Signal   | No, Jam signal bypass to jam(game pcb) side output    |
 /// | `1`         |  `1`        | Jam Signal   | Yes, Extra serial port is forcely bind to 2P output, default port to 1P |
 ///
-/// - MODE0 (5) : Swap `start` and `jam` input signal on vend side, default definition is start.
-/// - MODE1 (6) : Special feature disable or enable
-#[derive(TryFromPrimitive, IntoPrimitive)]
+/// - MODE0 (5) : Special feature disable or enable
+/// - MODE1 (6) : Swap `start` and `jam` input signal on vend side, default definition is start.
+#[derive(TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd)]
 #[repr(u8)]
 #[allow(dead_code)]
 pub enum AppMode0V3 {
@@ -246,6 +246,12 @@ pub enum AppMode0V3 {
     /// Bypass JAM (swapped logically). JAM signal bypass to host(game pcb) side output.
     /// And independent of swapping signal, extra serial port is forcely bind to 2P output, default port to 1P
     BypassJamAndExtraSerialPayment = 3,
+}
+
+impl AppMode0V3 {
+    pub const fn default() -> Self {
+        Self::BypassStart
+    }
 }
 
 impl defmt::Format for AppMode0V3 {

@@ -36,35 +36,21 @@ impl Application {
         let async_input_event_ch = &shared.async_input_event_ch;
         let mut timing = TimingOverride::default();
         let mut inhibit = InhibitOverride::default();
-
+        let mut appmode = AppMode0V3::default();
+        let mut default_serial = Player::Undefined;
         loop {
             // timing flag would be used in future implemenation.
             // reading dipsw will be changed to actor model
-            let (inhibit_flag, timing_flag, appmode_flag) = hardware.dipsw.read();
-            let default_serial = match appmode_flag {
-                AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
-                    Player::Undefined
-                }
-                AppMode0V3::BypassJam | AppMode0V3::BypassJamAndExtraSerialPayment => {
-                    Player::Player1
-                }
-            };
-
-            // Timing Override
-            if timing_flag != timing {
-                let new_timing = timing_flag.get_toggle_timing();
-                defmt::info!("Timing status chagned : {}", timing_flag);
-
-                shared.arcade_players_timing[PLAYER_1_INDEX].set(new_timing);
-                shared.arcade_players_timing[PLAYER_2_INDEX].set(new_timing);
-
-                timing = timing_flag;
-            }
+            let (inhibit_latest, timing_latest, appmode_latest) = hardware.dipsw.read();
 
             // Inhibit Override
-            if inhibit_flag != inhibit {
-                let changed = inhibit_flag.check_changed(&inhibit);
-                defmt::info!("Inhibit status chagned, P1/2 : {:?}", changed);
+            if inhibit_latest != inhibit {
+                let changed = inhibit_latest.check_changed(&inhibit);
+                defmt::info!(
+                    "Inhibit status chagned, {}, P1/2 : {:?}",
+                    inhibit_latest,
+                    changed
+                );
 
                 if let Some(x) = changed.0 {
                     let io_status = async_input_event_ch
@@ -89,7 +75,34 @@ impl Application {
                     // send uart set inhibited
                 }
 
-                inhibit = inhibit_flag;
+                inhibit = inhibit_latest;
+            }
+
+            // Timing Override
+            if timing_latest != timing {
+                let new_timing = timing_latest.get_toggle_timing();
+                defmt::info!("Timing status chagned : {}", timing_latest);
+
+                shared.arcade_players_timing[PLAYER_1_INDEX].set(new_timing);
+                shared.arcade_players_timing[PLAYER_2_INDEX].set(new_timing);
+
+                timing = timing_latest;
+            }
+
+            // AppMode setting
+            if appmode_latest != appmode {
+                defmt::info!("App Mode (0v3) status chagned : {}", appmode_latest);
+
+                default_serial = match appmode_latest {
+                    AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
+                        Player::Undefined
+                    }
+                    AppMode0V3::BypassJam | AppMode0V3::BypassJamAndExtraSerialPayment => {
+                        Player::Player1
+                    }
+                };
+
+                appmode = appmode_latest;
             }
 
             if let Ok(x) = hardware.card_reader.channel.try_receive() {
@@ -107,7 +120,7 @@ impl Application {
 
                 match InputEvent::try_from(raw_input_event) {
                     Ok(y) => {
-                        y.replace_arr(match appmode_flag {
+                        y.replace_arr(match appmode {
                             AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
                                 &[
                                     (InputPortKind::StartJam1P, InputPortKind::Start1P),
