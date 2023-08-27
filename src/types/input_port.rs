@@ -27,18 +27,35 @@ pub enum InputPortKind {
     Nothing = 10,
 }
 
+#[cfg(debug_assertions)]
 const INPUT_PORT_KIND_STRS: [&str; 11] = [
-    "Start1P",
-    "Start2P",
-    "Vend1P",
-    "Vend2P",
-    "Jam1P",
-    "Jam2P",
-    "StartJam1P",
-    "StartJam2P",
-    "Inhibit1P",
-    "Inhibit2P",
+    "VendIn_1P-Start ",
+    "VendIn_2P-Start ",
+    "VendIn_1P-Vend  ",
+    "VendIn_2P-Vend  ",
+    "VendIn_1P-Jam   ",
+    "VendIn_2P-Jam   ",
+    "VendIn_1P-STR/JAM",
+    "VendIn_2P-STR/JAM",
+    "HostIn_1P-Inhibit",
+    "HostIn_2P-Inhibit",
     "Nothing",
+];
+
+#[cfg(not(debug_assertions))]
+#[rustfmt::skip]
+const INPUT_PORT_KIND_STRS: [&str; 11] = [
+    "P1V-iSTR",
+    "P2V-iSTR",
+    "P1V-iVND",
+    "P2V-iVND",
+    "P1V-iJAM",
+    "P2V-iJAM",
+    "P1V-iS/J",
+    "P2V-iS/J",
+    "P1H-iINH",
+    "P2H-iINH",
+    "iNothing",
 ];
 
 // assert_eq!(InputPortKind::count(), INPUT_PORT_KIND_STRS.len());

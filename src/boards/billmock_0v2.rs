@@ -26,6 +26,8 @@ use crate::components::serial_device::CardReaderDevice;
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
 use crate::semi_layer::buffered_wait::InputPortKind;
+use crate::types::buffered_opendrain_kind::BufferedOpenDrainKind;
+use crate::types::player::Player;
 
 bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
@@ -69,6 +71,7 @@ pub fn hardware_init_0v2(
     Hardware {
         vend_sides: [
             VendSideBill::new(
+                Player::Player1,
                 Output::new(p.PB0.degrade(), Level::Low, Speed::Low), // REAL_INH
                 ExtiInput::new(
                     Input::new(p.PB2, Pull::None).degrade(), // REAL_VND
@@ -84,6 +87,7 @@ pub fn hardware_init_0v2(
                 &shared_resource.arcade_players_timing[PLAYER_1_INDEX],
             ),
             VendSideBill::new(
+                Player::Player2,
                 Output::new(p.PA1.degrade(), Level::Low, Speed::Low), // LED_STR1 (Temporary)
                 ExtiInput::new(
                     Input::new(p.PD1, Pull::None).degrade(), // REAL_STR1
@@ -101,6 +105,7 @@ pub fn hardware_init_0v2(
         ],
         host_sides: [
             HostSideBill::new(
+                Player::Player1,
                 ExtiInput::new(
                     Input::new(p.PD0, Pull::None).degrade(), // VIRT0_INH
                     p.EXTI0.degrade(),                       // EXTI0
@@ -114,6 +119,7 @@ pub fn hardware_init_0v2(
                 &shared_resource.arcade_players_timing[PLAYER_1_INDEX],
             ),
             HostSideBill::new(
+                Player::Player2,
                 ExtiInput::new(
                     Input::new(p.PA15, Pull::None).degrade(), // VIRT1_INH
                     p.EXTI15.degrade(),                       // EXTI15
@@ -131,10 +137,12 @@ pub fn hardware_init_0v2(
             BufferedOpenDrain::new(
                 Output::new(p.PA4.degrade(), Level::High, Speed::Low),
                 &shared_resource.indicator_timing,
+                BufferedOpenDrainKind::Indicator(1).const_str(),
             ),
             BufferedOpenDrain::new(
                 Output::new(p.PA5.degrade(), Level::High, Speed::Low),
                 &shared_resource.indicator_timing,
+                BufferedOpenDrainKind::Indicator(2).const_str(),
             ),
         ],
         dipsw: DipSwitch::new(

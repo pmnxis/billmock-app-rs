@@ -132,12 +132,12 @@ pub fn hardware_init_0v3(
             BufferedOpenDrain::new(
                 Output::new(p.PA4.degrade(), Level::High, Speed::Low),
                 &shared_resource.indicator_timing,
-                BufferedOpenDrainKind::Indicator(0).const_str(),
+                BufferedOpenDrainKind::Indicator(1).const_str(),
             ),
             BufferedOpenDrain::new(
                 Output::new(p.PA5.degrade(), Level::High, Speed::Low),
                 &shared_resource.indicator_timing,
-                BufferedOpenDrainKind::Indicator(1).const_str(),
+                BufferedOpenDrainKind::Indicator(2).const_str(),
             ),
         ],
         dipsw: DipSwitch::new(

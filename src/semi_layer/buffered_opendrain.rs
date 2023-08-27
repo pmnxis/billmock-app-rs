@@ -7,7 +7,7 @@
 use core::cell::UnsafeCell;
 
 use bit_field::BitField;
-use embassy_stm32::gpio::{AnyPin, Output};
+use embassy_stm32::gpio::{AnyPin, Level, Output};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{with_timeout, Duration, Instant, Timer};
@@ -371,8 +371,14 @@ pub struct BufferedOpenDrain {
 impl BufferedOpenDrain {
     fn reflect_on_io(&self, hsm: &MicroHsm) {
         let io = unsafe { &mut *self.io.get() };
-        defmt::info!("OUT[] : {}", hsm.expect_output_pin_state() as bool);
-        io.set_level(hsm.expect_output_pin_state().into());
+
+        let state: Level = hsm.expect_output_pin_state().into();
+        #[cfg(debug_assertions)]
+        {
+            defmt::println!("OUT[{}] : {}", self.debug_name, state);
+        }
+
+        io.set_level(state);
     }
 
     pub const fn new(
