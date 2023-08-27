@@ -44,7 +44,7 @@ fn main() -> Result<(), Error> {
 
     let is_dirty = statuses.iter().any(|status| {
         let s = status.status();
-        !((s == git2::Status::CURRENT) & (s == git2::Status::IGNORED))
+        !((s == git2::Status::CURRENT) | (s == git2::Status::IGNORED))
     });
 
     let dirty_str = if is_dirty {
