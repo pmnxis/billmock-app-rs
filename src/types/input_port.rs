@@ -98,10 +98,10 @@ impl InputPortKind {
         // if Player::Undefined == player {
         if Player::Undefined as u8 == player as u8 {
             let ret: RawInputPortKind = self as u8;
-            return (ret, INPUT_PORT_KIND_STRS[ret as usize]);
+            (ret, INPUT_PORT_KIND_STRS[ret as usize])
         } else if Self::Nothing as u8 != idx {
             let ret = (idx + player as u8 - 1) as RawInputPortKind;
-            return (ret, INPUT_PORT_KIND_STRS[self as usize]);
+            (ret, INPUT_PORT_KIND_STRS[self as usize])
         } else {
             (self as RawInputPortKind, self.const_str())
         }
