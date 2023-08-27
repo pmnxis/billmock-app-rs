@@ -29,11 +29,14 @@ async fn main(spawner: Spawner) {
     // Initialize necessary BSP
     let board: &'static mut Board = make_static!(Board::init());
 
-    // few wait for stablize external electronic status
-    Timer::after(Duration::from_secs(1)).await;
+    // heuristic wait for stablize external electronic status
+    Timer::after(Duration::from_millis(1000)).await;
 
     // Spawns a task bound to the BSP
     board.start_tasks(&spawner);
+
+    // heuristic wait for stablize task spawning
+    Timer::after(Duration::from_millis(500)).await;
 
     defmt::info!("Hello BillMock");
 

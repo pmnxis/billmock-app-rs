@@ -75,21 +75,27 @@ impl From<InputEventKind> for RawInputEventKind {
 /// Internal PullUp + 4050 + OpenDrain outside (NMOS or ULN2803)
 pub struct BufferedWait {
     wait: UnsafeCell<ExtiInput<'static, AnyPin>>,
-    port: RawInputPortKind,
     channel: &'static InputEventChannel,
+    port: RawInputPortKind,
+    #[cfg(debug_assertions)]
+    debug_name: &'static str,
 }
 
 #[allow(unused)]
 impl BufferedWait {
     pub const fn new(
         wait: ExtiInput<'static, AnyPin>,
-        port: RawInputPortKind,
         channel: &'static InputEventChannel,
+        port: RawInputPortKind,
+        debug_name: &'static str,
     ) -> BufferedWait {
         Self {
             wait: UnsafeCell::new(wait),
-            port,
             channel,
+            port,
+
+            #[cfg(debug_assertions)]
+            debug_name,
         }
     }
 
@@ -107,18 +113,32 @@ impl BufferedWait {
         let wait = unsafe { &mut *self.wait.get() };
         wait.wait_for_high().await;
 
+        #[cfg(debug_assertions)]
+        defmt::println!("IN [{}  ] : High", self.debug_name);
+
         loop {
             // detect low signal (active low)
             wait.wait_for_low().await;
             let entered_time = Instant::now();
+
+            #[cfg(debug_assertions)]
+            defmt::println!("IN [{}  ] : Low", self.debug_name);
+
             self.send(InputEventKind::Pressed).await;
 
             // detect high signal (active high)
             wait.wait_for_high().await;
-            match ((Instant::now() - entered_time)
-                .as_millis()
-                .min(TINY_LONG_PRESS_MAX as u64 * 10)
-                / 10) as RawInputEventKind
+            let hold_time = Instant::now() - entered_time;
+
+            #[cfg(debug_assertions)]
+            defmt::println!(
+                "IN [{}  ] : High, duration : {=u64:us}",
+                self.debug_name,
+                hold_time.as_micros()
+            );
+
+            match (hold_time.as_millis().min(TINY_LONG_PRESS_MAX as u64 * 10) / 10)
+                as RawInputEventKind
             {
                 0 => { /* too short time pressed */ }
                 x => {

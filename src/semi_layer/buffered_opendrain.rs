@@ -371,12 +371,10 @@ pub struct BufferedOpenDrain {
 impl BufferedOpenDrain {
     fn reflect_on_io(&self, hsm: &MicroHsm) {
         let io = unsafe { &mut *self.io.get() };
-
         let state: Level = hsm.expect_output_pin_state().into();
+
         #[cfg(debug_assertions)]
-        {
-            defmt::println!("OUT[{}] : {}", self.debug_name, state);
-        }
+        defmt::println!("OUT[{}] : {}", self.debug_name, state);
 
         io.set_level(state);
     }

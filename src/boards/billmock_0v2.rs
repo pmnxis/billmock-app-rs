@@ -25,7 +25,6 @@ use crate::components::serial_device::CardReaderDevice;
 // use crate::components::start_button::StartButton;
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
-use crate::semi_layer::buffered_wait::InputPortKind;
 use crate::types::buffered_opendrain_kind::BufferedOpenDrainKind;
 use crate::types::player::Player;
 
@@ -77,12 +76,10 @@ pub fn hardware_init_0v2(
                     Input::new(p.PB2, Pull::None).degrade(), // REAL_VND
                     p.EXTI2.degrade(),                       // EXTI2
                 ),
-                InputPortKind::Vend1P,
                 ExtiInput::new(
                     Input::new(p.PB14, Pull::None).degrade(), // REAL_JAM (moved from PB15 at HW v0.3)
                     p.EXTI14.degrade(),                       // EXTI14
                 ),
-                InputPortKind::StartJam1P,
                 async_input_event_ch,
                 &shared_resource.arcade_players_timing[PLAYER_1_INDEX],
             ),
@@ -93,12 +90,10 @@ pub fn hardware_init_0v2(
                     Input::new(p.PD1, Pull::None).degrade(), // REAL_STR1
                     p.EXTI1.degrade(),                       // EXTI1
                 ),
-                InputPortKind::Vend2P,
                 ExtiInput::new(
                     Input::new(p.PB11, Pull::None).degrade(), // REAL_STR0
                     p.EXTI11.degrade(),                       // EXTI11
                 ),
-                InputPortKind::StartJam2P,
                 async_input_event_ch,
                 &shared_resource.arcade_players_timing[PLAYER_2_INDEX],
             ),
@@ -110,7 +105,6 @@ pub fn hardware_init_0v2(
                     Input::new(p.PD0, Pull::None).degrade(), // VIRT0_INH
                     p.EXTI0.degrade(),                       // EXTI0
                 ),
-                InputPortKind::Inhibit1P,
                 Output::new(p.PD3.degrade(), Level::Low, Speed::Low), // VIRT0_BSY
                 Output::new(p.PD2.degrade(), Level::Low, Speed::Low), // VIRT0_VND
                 Output::new(p.PB9.degrade(), Level::Low, Speed::Low), // VIRT0_JAM
@@ -124,7 +118,6 @@ pub fn hardware_init_0v2(
                     Input::new(p.PA15, Pull::None).degrade(), // VIRT1_INH
                     p.EXTI15.degrade(),                       // EXTI15
                 ),
-                InputPortKind::Inhibit2P,
                 Output::new(p.PB4.degrade(), Level::Low, Speed::Low), // VIRT1_BSY
                 Output::new(p.PC13.degrade(), Level::Low, Speed::Low), // VIRT1_VND
                 Output::new(p.PB8.degrade(), Level::Low, Speed::Low), // VIRT1_JAM
