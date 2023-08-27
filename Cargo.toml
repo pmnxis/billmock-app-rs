@@ -5,7 +5,7 @@
 [package]
 name = "billmock-app-rs"
 edition = "2021"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Jinwoo Park <pmnxis@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "application side of billmock hardware, powered by rust-embedded"
@@ -48,6 +48,10 @@ nonmax = { version = "0.5.3", default-features = false, features = [] } # to use
 # details : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
 serial-arcade-pay = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
 serial-arcade-pay-impl = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
+
+[build-dependencies]
+git2 = "0.17" # Git library for Rust
+cargo_metadata = "0.17"
 
 [profile.release]
 # or "z"

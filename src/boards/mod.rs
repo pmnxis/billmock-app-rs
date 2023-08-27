@@ -30,6 +30,12 @@ pub const LED_INDEX_MAX: usize = 2;
 pub const LED_1_INDEX: usize = 0;
 pub const LED_2_INDEX: usize = 1;
 
+const PROJECT_NAME: &str = env!("PROJECT_NAME");
+const VERSION_STR: &str = env!("PROJECT_VERSION");
+const COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
+const GIT_COMMIT_DATETIME: &str = env!("GIT_COMMIT_DATETIME");
+const PRINT_BAR: &str = "+-----------------------------------------------------------+";
+
 #[cfg(feature = "hw_0v2")]
 mod billmock_0v2;
 #[cfg(feature = "hw_0v3")]
@@ -171,6 +177,13 @@ pub struct Board {
 impl Board {
     pub fn init() -> Self {
         let p = Hardware::mcu_pre_init();
+
+        // print my info
+        defmt::println!("{}", PRINT_BAR);
+        defmt::println!("Firmware Ver : {} {}", PROJECT_NAME, VERSION_STR);
+        defmt::println!("Git Hash     : {}", COMMIT_HASH);
+        defmt::println!("Git Datetime : {}", GIT_COMMIT_DATETIME);
+        defmt::println!("{}", PRINT_BAR);
 
         let shared_resource = make_static!(SharedResource::init());
         let hardware: Hardware = Hardware::hardware_init(p, shared_resource);
