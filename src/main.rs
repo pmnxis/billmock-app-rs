@@ -16,7 +16,6 @@ mod components;
 mod semi_layer;
 mod types;
 
-use defmt::*;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use static_cell::make_static;
@@ -30,13 +29,16 @@ async fn main(spawner: Spawner) {
     // Initialize necessary BSP
     let board: &'static mut Board = make_static!(Board::init());
 
-    // few wait for stablize external electronic status
-    Timer::after(Duration::from_secs(1)).await;
+    // heuristic wait for stablize external electronic status
+    Timer::after(Duration::from_millis(1000)).await;
 
     // Spawns a task bound to the BSP
     board.start_tasks(&spawner);
 
-    info!("Hello BillMock");
+    // heuristic wait for stablize task spawning
+    Timer::after(Duration::from_millis(500)).await;
+
+    defmt::info!("Hello BillMock");
 
     let application = Application::new(board);
     application.main_task().await;

@@ -7,7 +7,7 @@
 use core::cell::UnsafeCell;
 
 use bit_field::BitField;
-use embassy_stm32::gpio::{AnyPin, Output};
+use embassy_stm32::gpio::{AnyPin, Level, Output};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{with_timeout, Duration, Instant, Timer};
@@ -361,24 +361,35 @@ pub struct BufferedOpenDrain {
     io: UnsafeCell<Output<'static, AnyPin>>,
     shared_timing: &'static SharedToggleTiming,
     channel_hsm: OpenDrainRequestChannel,
+
+    /// only use for debug print
+    #[cfg(debug_assertions)]
+    debug_name: &'static str,
 }
 
 #[allow(unused)]
 impl BufferedOpenDrain {
     fn reflect_on_io(&self, hsm: &MicroHsm) {
         let io = unsafe { &mut *self.io.get() };
+        let state: Level = hsm.expect_output_pin_state().into();
 
-        io.set_level(hsm.expect_output_pin_state().into());
+        #[cfg(debug_assertions)]
+        defmt::println!("OUT[{}] : {}", self.debug_name, state);
+
+        io.set_level(state);
     }
 
     pub const fn new(
         out_pin: Output<'static, AnyPin>,
         shared_timing: &'static SharedToggleTiming,
+        debug_name: &'static str,
     ) -> Self {
         Self {
             io: UnsafeCell::new(out_pin),
             shared_timing,
             channel_hsm: Channel::new(),
+            #[cfg(debug_assertions)]
+            debug_name,
         }
     }
 

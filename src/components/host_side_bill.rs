@@ -10,10 +10,12 @@ use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
-use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait, InputEventChannel};
+use crate::semi_layer::buffered_wait::buffered_wait_spawn;
+use crate::semi_layer::buffered_wait::{BufferedWait, InputEventChannel, RawInputPortKind};
 use crate::semi_layer::timing::SharedToggleTiming;
-use crate::types::const_convert::ConstInto;
+use crate::types::buffered_opendrain_kind::BufferedOpenDrainKind;
 use crate::types::input_port::InputPortKind;
+use crate::types::player::Player;
 
 pub struct HostSideBill {
     in_inhibit: BufferedWait,
@@ -25,8 +27,8 @@ pub struct HostSideBill {
 
 impl HostSideBill {
     pub const fn new(
+        player: Player,
         in_inhibit: ExtiInput<'static, AnyPin>,
-        in_inhibit_event: InputPortKind,
         out_busy: Output<'static, AnyPin>,
         out_vend: Output<'static, AnyPin>,
         out_jam: Output<'static, AnyPin>,
@@ -34,12 +36,19 @@ impl HostSideBill {
         mpsc_ch: &'static InputEventChannel,
         shared_timing: &'static SharedToggleTiming,
     ) -> Self {
+        let (inh_p, inh_str): (RawInputPortKind, &'static str) =
+            InputPortKind::Inhibit1P.to_raw_and_const_str(player);
+        let busy_str: &'static str = BufferedOpenDrainKind::HostSideOutBusy(player).const_str();
+        let vend_str: &'static str = BufferedOpenDrainKind::HostSideOutVend(player).const_str();
+        let jam_str: &'static str = BufferedOpenDrainKind::HostSideOutJam(player).const_str();
+        let start_str: &'static str = BufferedOpenDrainKind::HostSideOutStart(player).const_str();
+
         Self {
-            in_inhibit: BufferedWait::new(in_inhibit, in_inhibit_event.const_into(), mpsc_ch),
-            out_busy: BufferedOpenDrain::new(out_busy, shared_timing),
-            out_vend: BufferedOpenDrain::new(out_vend, shared_timing),
-            out_jam: BufferedOpenDrain::new(out_jam, shared_timing),
-            out_start: BufferedOpenDrain::new(out_start, shared_timing),
+            in_inhibit: BufferedWait::new(in_inhibit, mpsc_ch, inh_p, inh_str),
+            out_busy: BufferedOpenDrain::new(out_busy, shared_timing, busy_str),
+            out_vend: BufferedOpenDrain::new(out_vend, shared_timing, vend_str),
+            out_jam: BufferedOpenDrain::new(out_jam, shared_timing, jam_str),
+            out_start: BufferedOpenDrain::new(out_start, shared_timing, start_str),
         }
     }
 
