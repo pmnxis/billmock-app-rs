@@ -42,9 +42,11 @@ fn main() -> Result<(), Error> {
         } // Failed to get repository status
     };
 
-    let is_dirty = statuses
-        .iter()
-        .any(|status| status.status() != git2::Status::CURRENT);
+    let is_dirty = statuses.iter().any(|status| {
+        let s = status.status();
+        !((s == git2::Status::CURRENT) & (s == git2::Status::IGNORED))
+    });
+
     let dirty_str = if is_dirty {
         "-dirty".to_owned()
     } else {

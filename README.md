@@ -25,6 +25,8 @@ The project has been granted an open source disclosure except of NDA era.
 Based on BillMock-HW 0.3. <br/>
 0.2 HW bring-up codes are still left for recyle the old PCB.
 
+If need to use old 0.2 HW, run `cargo build --features hw_0v2 --no-default-features`.
+
 ### Target hardware image
 ![Actual BillMock PCB 0v3](docs/img/BillMockPCB_0v3.jpg)
 

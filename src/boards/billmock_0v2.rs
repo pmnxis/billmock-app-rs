@@ -12,7 +12,6 @@ use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
 use embassy_stm32::usart::{Config as UsartConfig, Uart};
 use embassy_stm32::{bind_interrupts, peripherals};
-use static_cell::make_static;
 use {defmt_rtt as _, panic_probe as _};
 
 use super::{Hardware, SharedResource};
