@@ -228,7 +228,7 @@ pub enum AppMode {
 ///
 /// - MODE0 (5) : Special feature disable or enable
 /// - MODE1 (6) : Swap `start` and `jam` input signal on vend side, default definition is start.
-#[derive(TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd)]
+#[derive(TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, Clone, Copy)]
 #[repr(u8)]
 #[allow(dead_code)]
 pub enum AppMode0V3 {
