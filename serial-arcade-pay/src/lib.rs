@@ -11,7 +11,7 @@
 
 #![no_std]
 
-#[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, defmt::Format, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub struct GenericIncomeInfo {
     pub player: Option<u8>,
     pub price: Option<u32>,
