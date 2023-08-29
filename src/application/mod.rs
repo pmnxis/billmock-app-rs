@@ -154,7 +154,7 @@ impl Application {
 
             let input_event = if let Ok(raw_input_event) = async_input_event_ch.try_receive() {
                 let input_bits = async_input_event_ch.get_cache();
-                defmt::info!("Input cache state changed : {:04X}", input_bits);
+                // defmt::info!("Input cache state changed : {:04X}", input_bits);
 
                 match InputEvent::try_from(raw_input_event) {
                     Ok(y) => {
