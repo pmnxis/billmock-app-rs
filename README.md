@@ -22,8 +22,11 @@ This project began development at the request of **GPARK Co., Ltd**<sup>[4](#foo
 The project has been granted an open source disclosure except of NDA era.
 
 ## Target Hardware
-Based on BillMock-HW 0.3. <br/>
+Based on BillMock-HW 0.3 and 0.4. <br/>
 0.2 HW bring-up codes are still left for recyle the old PCB.
+- 0.2 HW has different gpio configuration compare to latest boards.
+- 0.3 HW has minor bugs, floating on VendSide-Inhibit and missing net route on VendSide-1P-StartJam.
+- 0.4 HW fixed 0.3 HW bugs.
 
 If need to use old 0.2 HW, run `cargo build --features hw_0v2 --no-default-features`.
 
@@ -41,6 +44,9 @@ The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual G
 
 #### v 0.3 (2023-08-11)
 [BillMock-HW-0v3.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf)
+
+#### v 0.4 (2023-08-30)
+[BillMock-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v4.pdf)
 
 ## Dependencies
 See details here [dependencies](doc/dependencies.md)
