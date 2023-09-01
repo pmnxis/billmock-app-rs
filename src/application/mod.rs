@@ -129,7 +129,7 @@ impl Application {
                         },
                     ) => {
                         defmt::warn!("StartButtonDecideSerialToVend - duplicated income received, player should press start button.");
-                        hardware.card_reader.send_nack().await;
+                        hardware.card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
                     }
                     (
                         AppMode0V3::StartButtonDecideSerialToVend,
