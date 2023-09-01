@@ -23,7 +23,7 @@ use example_byte::*;
 // use example_str::*;
 use serial_arcade_pay::*;
 
-#[derive(Debug, defmt::Format, Clone, Eq, PartialEq)]
+#[derive(Debug, defmt::Format, Clone, Copy, Eq, PartialEq)]
 pub enum SerialPayVarient {
     /// Byte-ish serial protocol spec
     ExampleByte,

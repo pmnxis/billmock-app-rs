@@ -114,7 +114,7 @@ impl Application {
                 appmode = appmode_latest;
             }
 
-            if let Ok(x) = hardware.card_reader.channel.try_receive() {
+            if let Ok(x) = hardware.card_reader.recv_channel.try_receive() {
                 match (
                     appmode,
                     income_backup.is_some(),
@@ -129,7 +129,7 @@ impl Application {
                         },
                     ) => {
                         defmt::warn!("StartButtonDecideSerialToVend - duplicated income received, player should press start button.");
-                        // todo! - hardware.card_reader.nack();
+                        hardware.card_reader.send_nack().await;
                     }
                     (
                         AppMode0V3::StartButtonDecideSerialToVend,
@@ -141,19 +141,20 @@ impl Application {
                     ) => {
                         defmt::info!("StartButtonDecideSerialToVend - income received, wait for start button");
                         income_backup = Some(payment);
+                        hardware.card_reader.send_ack().await;
                     }
                     (_, _, packet) => {
                         packet
                             .override_player_by_duration()
                             .apply_output(board, timing.is_override_force())
                             .await;
+                        hardware.card_reader.send_ack().await;
                     }
                 }
-                // todo! - ACK pass to TXs
             }
 
             let input_event = if let Ok(raw_input_event) = async_input_event_ch.try_receive() {
-                let input_bits = async_input_event_ch.get_cache();
+                // let input_bits = async_input_event_ch.get_cache();
                 // defmt::info!("Input cache state changed : {:04X}", input_bits);
 
                 match InputEvent::try_from(raw_input_event) {
