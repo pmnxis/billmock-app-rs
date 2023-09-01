@@ -14,9 +14,11 @@ const BYTE_CMD_HEARTBEAT: u8 = 0x01;
 const BYTE_CMD_ACK: u8 = 0x02;
 const BYTE_CMD_NACK: u8 = 0x03;
 const BYTE_CMD_INCOME: u8 = 0x04;
+const BYTE_CMD_CHECK_BUSY_STATE: u8 = 0x05; // Billmock -> Credit
 const BYTE_CMD_SET_BUSY_STATE: u8 = 0x05;
 const BYTE_CMD_CHECK_INHIBIT: u8 = 0x06;
 const BYTE_CMD_FAILED_INCOME: u8 = 0x07;
+const BYTE_CMD_SET_INHIBIT: u8 = 0x16; // Billmock -> Credit
 
 const BYTE_OPT_NONE_MARK: u8 = 0x00;
 const BYTE_OPT_SOME_MARK: u8 = 0x01;
@@ -151,9 +153,29 @@ impl AnyExampleDevice for ExampleByteRecv {
         }
     }
 
-    fn request_form(_request: &GenericPaymentRequest, _tx_inner_buff: &mut [u8]) -> Option<usize> {
-        // not implemented
-        None
+    fn request_form(request: &GenericPaymentRequest, tx_inner_buff: &mut [u8]) -> Option<usize> {
+        let (tx_cmd, len_u8) = match request {
+            GenericPaymentRequest::Heartbeat => (BYTE_CMD_HEARTBEAT, 1u8),
+            GenericPaymentRequest::Ack => (BYTE_CMD_ACK, 1u8),
+            GenericPaymentRequest::Nack => (BYTE_CMD_NACK, 1u8),
+            GenericPaymentRequest::CheckBusy => (BYTE_CMD_CHECK_BUSY_STATE, 1u8),
+            GenericPaymentRequest::CheckInhibit => (BYTE_CMD_CHECK_INHIBIT, 1u8),
+            GenericPaymentRequest::SetGlobalInhibit(x) => {
+                tx_inner_buff[INNER_DATA_TEXT_OFFSET] = match x {
+                    true => 0b1111,
+                    false => 0,
+                };
+                (BYTE_CMD_SET_INHIBIT, 2u8)
+            }
+            GenericPaymentRequest::SetInhibit(x) => {
+                tx_inner_buff[INNER_DATA_TEXT_OFFSET] = x.get_raw();
+                (BYTE_CMD_SET_INHIBIT, 2u8)
+            }
+        };
+
+        tx_inner_buff[INNER_DATA_CMD_OFFSET] = tx_cmd;
+
+        Some(len_u8 as usize)
     }
 
     fn degrade(&self) -> GenericPaymentRecv {

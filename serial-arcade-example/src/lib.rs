@@ -23,7 +23,7 @@ use example_byte::*;
 // use example_str::*;
 use serial_arcade_pay::*;
 
-#[derive(Debug, defmt::Format, Clone, Eq, PartialEq)]
+#[derive(Debug, defmt::Format, Clone, Copy, Eq, PartialEq)]
 pub enum SerialPayVarient {
     /// Byte-ish serial protocol spec
     ExampleByte,
@@ -88,10 +88,37 @@ impl SerialArcadePay for SerialPayVarient {
 
     fn generate_tx(
         &self,
-        _request: &GenericPaymentRequest,
-        _tx_raw_buff: &mut [u8],
+        request: &GenericPaymentRequest,
+        tx_raw_buff: &mut [u8],
     ) -> Result<usize, SerialArcadeError> {
-        unimplemented!()
+        (
+            tx_raw_buff[RAW_DATA_SRC_OFFSET],
+            tx_raw_buff[RAW_DATA_FORMAT_OFFSET],
+        ) = match self {
+            SerialPayVarient::ExampleByte => Ok((HEADER_SRC_BILLMOCK, HEADER_FORMAT_BYTE)),
+            SerialPayVarient::ExampleString => Ok((HEADER_SRC_BILLMOCK, HEADER_FORMAT_STR)),
+            Self::Common => Err(SerialArcadeError::UnsupportedSpec),
+        }?;
+
+        let inner_len = self
+            .generate_tx(request, &mut tx_raw_buff[RAW_DATA_TEXT_OFFSET..])
+            .map_or(Err(SerialArcadeError::VarientNotSupportRequest), Ok)?;
+
+        tx_raw_buff[RAW_DATA_LEN_H_OFFSET] = ((inner_len >> 8) & 0xFF) as u8;
+        tx_raw_buff[RAW_DATA_LEN_L_OFFSET] = (inner_len & 0xFF) as u8;
+
+        let checksum = actual_checksum(
+            &mut tx_raw_buff[RAW_DATA_TEXT_OFFSET..RAW_DATA_TEXT_OFFSET + inner_len],
+            inner_len,
+        );
+
+        // big endian
+        tx_raw_buff[RAW_DATA_CRC32_OFFSET] = ((checksum >> 24) & 0xFF) as u8;
+        tx_raw_buff[RAW_DATA_CRC32_OFFSET + 1] = ((checksum >> 16) & 0xFF) as u8;
+        tx_raw_buff[RAW_DATA_CRC32_OFFSET + 2] = ((checksum >> 8) & 0xFF) as u8;
+        tx_raw_buff[RAW_DATA_CRC32_OFFSET + 3] = (checksum & 0xFF) as u8;
+
+        Ok(RAW_DATA_TEXT_OFFSET + inner_len)
     }
 
     fn is_nda() -> bool {

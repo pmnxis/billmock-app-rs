@@ -47,6 +47,10 @@ impl TinyGenericInhibitInfo {
         }
     }
 
+    pub fn get_raw(&self) -> u8 {
+        self.0
+    }
+
     pub fn is_inhibit(&self, player_number: usize) -> bool {
         if 1 <= player_number && player_number <= 4 {
             self.0 & (0x1 << (player_number - 1)) != 0
