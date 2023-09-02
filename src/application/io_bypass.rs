@@ -6,6 +6,7 @@
 
 use defmt::{error, warn};
 
+use super::DEFAULT_VEND_INDICATOR_TIMING_MS;
 use crate::boards::*;
 use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::input_port::{InputEvent, InputPortKind};
@@ -32,7 +33,7 @@ pub async fn io_bypass(board: &'static Board, event: &InputEvent, override_druat
             let led_timing = if override_druation_force {
                 output.tick_tock(1).await;
 
-                200
+                DEFAULT_VEND_INDICATOR_TIMING_MS
             } else {
                 let mul10 = (x as u16) * 10;
                 output.alt_tick_tock(1, mul10, mul10).await;

@@ -6,6 +6,7 @@
 
 use serial_arcade_pay::*;
 
+use super::DEFAULT_VEND_INDICATOR_TIMING_MS;
 use crate::{boards::*, types::player::Player};
 
 #[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -81,7 +82,12 @@ impl PaymentReceive {
                 let coin_cnt = c.min(u8::MAX.into()) as u8;
                 if override_druation_force {
                     vend.tick_tock(coin_cnt).await;
-                    led.alt_tick_tock(coin_cnt, 200, 200).await;
+                    led.alt_tick_tock(
+                        coin_cnt,
+                        DEFAULT_VEND_INDICATOR_TIMING_MS,
+                        DEFAULT_VEND_INDICATOR_TIMING_MS,
+                    )
+                    .await;
                 } else {
                     vend.alt_tick_tock(coin_cnt, d, d).await;
                     led.alt_tick_tock(coin_cnt, d, d).await;
@@ -104,7 +110,12 @@ impl PaymentReceive {
                 let coin_cnt = c.min(u8::MAX.into()) as u8;
 
                 vend.tick_tock(coin_cnt).await;
-                led.alt_tick_tock(coin_cnt, 200, 200).await;
+                led.alt_tick_tock(
+                    coin_cnt,
+                    DEFAULT_VEND_INDICATOR_TIMING_MS,
+                    DEFAULT_VEND_INDICATOR_TIMING_MS,
+                )
+                .await;
             }
             _ => {}
         }

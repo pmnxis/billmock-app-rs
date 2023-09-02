@@ -23,6 +23,8 @@ use crate::types::dip_switch_config::{AppMode0V3, TimingOverride};
 use crate::types::input_port::{InputEvent, InputPortKind};
 use crate::types::player::Player;
 
+pub const DEFAULT_VEND_INDICATOR_TIMING_MS: u16 = 200;
+
 pub struct Application {
     /// Hardware and necessary shared object
     pub board: &'static Board,
