@@ -53,12 +53,8 @@ impl Application {
             // Inhibit Override
             let prev_inhibit = mutual_inhibit.get_dipsw();
             if inhibit_latest != prev_inhibit {
-                let changed = inhibit_latest.check_changed(&prev_inhibit);
-                defmt::info!(
-                    "Inhibit status chagned, {}, P1/2 : {:?}",
-                    inhibit_latest,
-                    changed
-                );
+                // let changed = inhibit_latest.check_changed(&prev_inhibit);
+                defmt::info!("Inhibit DIP status chagned : {}", inhibit_latest);
 
                 mutual_inhibit.update_dipsw(inhibit_latest);
                 mutual_inhibit.test_and_apply_output(board).await;

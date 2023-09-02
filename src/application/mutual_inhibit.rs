@@ -60,8 +60,9 @@ impl MutualInhibit {
         let cmp = ((self.0 >> 2) & 0b11) | (self.0 & 0b11);
         let prev = (self.0 >> 4) & 0b11;
         if cmp != prev {
+            let after = InhibitOverride::try_from(cmp).unwrap(); // infallable
             self.0 = (self.0 & 0b1100_1111) | (cmp << 4);
-            Some(InhibitOverride::try_from(cmp).unwrap()) // infallable
+            Some(after)
         } else {
             None
         }
