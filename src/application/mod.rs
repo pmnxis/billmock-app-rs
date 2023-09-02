@@ -7,17 +7,18 @@
 mod io_bypass;
 mod io_card;
 mod io_remap;
+mod mutual_inhibit;
 
-use bit_field::BitField;
 use embassy_futures::yield_now;
 use embassy_time::Duration;
 use embassy_time::Timer;
 use io_card::PaymentReceive;
 use serial_arcade_pay::{GenericIncomeInfo, GenericPaymentRecv};
 
+use self::mutual_inhibit::MutualInhibit;
 use crate::boards::*;
 use crate::semi_layer::buffered_wait::InputEventKind;
-use crate::types::dip_switch_config::{AppMode0V3, InhibitOverride, TimingOverride};
+use crate::types::dip_switch_config::{AppMode0V3, TimingOverride};
 use crate::types::input_port::{InputEvent, InputPortKind};
 use crate::types::player::Player;
 
@@ -39,10 +40,10 @@ impl Application {
         let shared = self.board.shared_resource;
         let async_input_event_ch = &shared.async_input_event_ch;
         let mut timing = TimingOverride::default();
-        let mut inhibit = InhibitOverride::default();
         let mut appmode = AppMode0V3::default();
         let mut default_serial = Player::Undefined;
         let mut income_backup: Option<GenericIncomeInfo> = None; // for StartButtonDecideSerialToVend
+        let mut mutual_inhibit = MutualInhibit::new();
 
         loop {
             // timing flag would be used in future implemenation.
@@ -50,38 +51,17 @@ impl Application {
             let (inhibit_latest, timing_latest, appmode_latest) = hardware.dipsw.read();
 
             // Inhibit Override
-            if inhibit_latest != inhibit {
-                let changed = inhibit_latest.check_changed(&inhibit);
+            let prev_inhibit = mutual_inhibit.get_dipsw();
+            if inhibit_latest != prev_inhibit {
+                let changed = inhibit_latest.check_changed(&prev_inhibit);
                 defmt::info!(
                     "Inhibit status chagned, {}, P1/2 : {:?}",
                     inhibit_latest,
                     changed
                 );
 
-                if let Some(x) = changed.0 {
-                    let io_status = async_input_event_ch
-                        .get_cache()
-                        .get_bit(usize::from(InputPortKind::Inhibit1P as u8));
-
-                    hardware.vend_sides[PLAYER_1_INDEX]
-                        .out_inhibit
-                        .set_level(x | io_status)
-                        .await;
-                    // send uart set inhibited
-                }
-                if let Some(x) = changed.1 {
-                    let io_status = async_input_event_ch
-                        .get_cache()
-                        .get_bit(usize::from(InputPortKind::Inhibit2P as u8));
-
-                    hardware.vend_sides[PLAYER_2_INDEX]
-                        .out_inhibit
-                        .set_level(x | io_status)
-                        .await;
-                    // send uart set inhibited
-                }
-
-                inhibit = inhibit_latest;
+                mutual_inhibit.update_dipsw(inhibit_latest);
+                mutual_inhibit.test_and_apply_output(board).await;
             }
 
             // Timing Override
@@ -172,14 +152,8 @@ impl Application {
                                     (InputPortKind::StartJam2P, InputPortKind::Jam2P),
                                 ],
                             })
-                            .ignore_arr(match inhibit {
-                                InhibitOverride::Normal => &[],
-                                InhibitOverride::ForceInhibit1P => &[InputPortKind::Inhibit1P],
-                                InhibitOverride::ForceInhibit2P => &[InputPortKind::Inhibit2P],
-                                InhibitOverride::ForceInhibitGlobal => {
-                                    &[InputPortKind::Inhibit1P, InputPortKind::Inhibit2P]
-                                }
-                            })
+                            .test_mut_inh_early_output(&mut mutual_inhibit, board)
+                            .await
                             .apply_output(board, timing.is_override_force())
                             .await;
 
