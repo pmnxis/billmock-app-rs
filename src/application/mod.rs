@@ -8,6 +8,7 @@ mod io_bypass;
 mod io_card;
 mod io_remap;
 mod mutual_inhibit;
+mod player_to_vend_led;
 
 use embassy_futures::yield_now;
 use embassy_time::Duration;

@@ -70,10 +70,6 @@ impl PaymentReceive {
     }
 
     pub async fn apply_output(self, board: &'static Board, override_druation_force: bool) -> Self {
-        let hardware = &board.hardware;
-        let host_1p = &hardware.host_sides[PLAYER_1_INDEX];
-        let host_2p = &hardware.host_sides[PLAYER_2_INDEX];
-
         match self.recv {
             GenericPaymentRecv::Income(GenericIncomeInfo {
                 player: None,
@@ -81,22 +77,14 @@ impl PaymentReceive {
                 signal_count: Some(c),
                 pulse_duration: Some(d),
             }) => {
-                let destination = match self.origin {
-                    Player::Player1 => host_1p,
-                    Player::Player2 => host_2p,
-                    _ => host_1p,
-                };
-
+                let (vend, led) = self.origin.to_vend_and_led(board);
+                let coin_cnt = c.min(u8::MAX.into()) as u8;
                 if override_druation_force {
-                    destination
-                        .out_vend
-                        .tick_tock(c.min(u8::MAX.into()) as u8)
-                        .await;
+                    vend.tick_tock(coin_cnt).await;
+                    led.alt_tick_tock(coin_cnt, 200, 200).await;
                 } else {
-                    destination
-                        .out_vend
-                        .alt_tick_tock(c.min(u8::MAX.into()) as u8, d, d)
-                        .await;
+                    vend.alt_tick_tock(coin_cnt, d, d).await;
+                    led.alt_tick_tock(coin_cnt, d, d).await;
                 }
             }
             GenericPaymentRecv::Income(GenericIncomeInfo {
@@ -107,13 +95,16 @@ impl PaymentReceive {
                 pulse_duration: _,
                 // pulse_duration: Some(_d),
             }) => {
-                match p {
-                    2 => host_2p,
-                    _ => host_1p,
+                let (vend, led) = match p {
+                    2 => Player::Player2,
+                    _ => Player::Player1,
                 }
-                .out_vend
-                .tick_tock(c.min(u8::MAX.into()) as u8)
-                .await;
+                .to_vend_and_led(board);
+
+                let coin_cnt = c.min(u8::MAX.into()) as u8;
+
+                vend.tick_tock(coin_cnt).await;
+                led.alt_tick_tock(coin_cnt, 200, 200).await;
             }
             _ => {}
         }

@@ -215,4 +215,12 @@ impl Board {
             x => Err(BoardCorrespondOutputMatchError { origin: *x }),
         }
     }
+
+    pub fn correspond_indicator(&'static self, port: &InputPortKind) -> Option<&BufferedOpenDrain> {
+        match port {
+            InputPortKind::Vend1P => Some(&self.hardware.indicators[LED_1_INDEX]),
+            InputPortKind::Vend2P => Some(&self.hardware.indicators[LED_2_INDEX]),
+            _ => None, // this is optional action, thus return with None , not Err
+        }
+    }
 }
