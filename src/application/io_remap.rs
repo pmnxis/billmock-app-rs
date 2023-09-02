@@ -127,7 +127,9 @@ impl InputEvent {
     }
 
     pub async fn apply_output(&self, board: &'static Board, override_druation_force: bool) -> Self {
-        io_bypass(board, self, override_druation_force).await;
+        if self.port != InputPortKind::Nothing {
+            io_bypass(board, self, override_druation_force).await;
+        }
         *self
     }
 }

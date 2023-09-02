@@ -11,12 +11,13 @@ use embassy_stm32::peripherals::{DMA1_CH1, DMA1_CH2};
 use embassy_stm32::usart::{RingBufferedUartRx, UartTx};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
+use embassy_time::{with_timeout, Duration};
 use serial_arcade_pay::*;
 use serial_arcade_pay_impl::SerialPayVarient;
 
 const CARD_READER_COMMAND_CHANNEL_SIZE: usize = 8;
 
-pub const CARD_READER_RX_BUFFER_SIZE: usize = 768; // most of packet is 320~330 bytes
+pub const CARD_READER_RX_BUFFER_SIZE: usize = 512; // most of packet is 320~330 bytes
 pub const CARD_READER_TX_BUFFER_SIZE: usize = 128; // most of pakcet is 6~12 bytes, but some uncommon command can be long
 
 pub type CardReaderResponseChannel =
@@ -53,26 +54,36 @@ impl CardReaderDevice {
         let tx = unsafe { &mut *self.tx.get() };
         let mut rx_buf = [0u8; CARD_READER_RX_BUFFER_SIZE];
         let mut tx_buf = [0u8; CARD_READER_TX_BUFFER_SIZE];
+        let mut inhibit_cache: Option<GenericPaymentRequest> = None;
 
         loop {
             // TX not hang on IO wait
-            if let (Some(varient), Ok(request)) = (current_varient, self.req_channel.try_receive())
-            {
-                match varient.generate_tx(&request, &mut tx_buf) {
-                    Ok(len) => {
-                        if let Err(e_dma) = tx.write(&tx_buf[0..len]).await {
-                            defmt::error!("USART TX error : {:?}", e_dma);
+
+            if let Ok(request) = self.req_channel.try_receive() {
+                if let Some(varient) = current_varient {
+                    match varient.generate_tx(&request, &mut tx_buf) {
+                        Ok(len) => {
+                            if let Err(e_dma) = tx.write(&tx_buf[0..len]).await {
+                                defmt::error!("USART TX error : {:?}", e_dma);
+                            }
+                        }
+                        Err(e) => {
+                            defmt::error!("GEN TX error : {:?}", e);
                         }
                     }
-                    Err(e) => {
-                        defmt::error!("GEN TX error : {:?}", e);
-                    }
+                } else if matches!(
+                    request,
+                    GenericPaymentRequest::SetGlobalInhibit(_)
+                        | GenericPaymentRequest::SetInhibit(_)
+                ) {
+                    // dequeue and cache when it's inhibit request
+                    inhibit_cache = Some(request);
                 }
             }
 
-            // RX hang IO wait
-            match rx.read(&mut rx_buf).await {
-                Ok(rx_len) => {
+            // RX hang IO wait, 200ms is heuristic value
+            match with_timeout(Duration::from_millis(200), rx.read(&mut rx_buf)).await {
+                Ok(Ok(rx_len)) => {
                     // for debug
                     let cutted_rx_buf = &rx_buf[..rx_len];
                     defmt::debug!("UART READ {}: {:02X}", rx_len, &cutted_rx_buf);
@@ -82,12 +93,22 @@ impl CardReaderDevice {
                         Ok((resp, varient)) => {
                             self.recv_channel.send(resp).await;
                             // todo! - generic unknown checker
+
+                            if let (None, Some(reque)) = (current_varient, inhibit_cache.clone()) {
+                                // Send cached inhibit request to original queue.
+                                if let Err(e) = self.req_channel.try_send(reque) {
+                                    defmt::error!("Coudln't reback cached inhibit request : {}", e);
+                                }
+                                inhibit_cache = None;
+                            }
+
                             current_varient = Some(varient);
                         }
                         Err(_e) => { /* parse error */ }
                     }
                 }
-                Err(e) => {
+                Err(_timeout_e) => {}
+                Ok(Err(e)) => {
                     defmt::error!("USART error : {:?}", e);
                 }
             };
