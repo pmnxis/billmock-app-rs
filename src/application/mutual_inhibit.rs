@@ -56,7 +56,7 @@ impl MutualInhibit {
         InhibitOverride::try_from((self.0 >> 2) & 0b11).unwrap() // infallable
     }
 
-    pub fn test_and_check(mut self) -> Option<InhibitOverride> {
+    pub fn test_and_check(&mut self) -> Option<InhibitOverride> {
         let cmp = ((self.0 >> 2) & 0b11) | (self.0 & 0b11);
         let prev = (self.0 >> 4) & 0b11;
         if cmp != prev {
