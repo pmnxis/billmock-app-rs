@@ -8,6 +8,7 @@ mod io_bypass;
 mod io_card;
 mod io_remap;
 mod mutual_inhibit;
+mod player_to_vend_led;
 
 use embassy_futures::yield_now;
 use embassy_time::Duration;
@@ -21,6 +22,8 @@ use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::dip_switch_config::{AppMode0V3, TimingOverride};
 use crate::types::input_port::{InputEvent, InputPortKind};
 use crate::types::player::Player;
+
+pub const DEFAULT_VEND_INDICATOR_TIMING_MS: u16 = 200;
 
 pub struct Application {
     /// Hardware and necessary shared object

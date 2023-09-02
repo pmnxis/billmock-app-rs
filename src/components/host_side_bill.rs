@@ -26,6 +26,7 @@ pub struct HostSideBill {
 }
 
 impl HostSideBill {
+    #[allow(clippy::all)]
     pub const fn new(
         player: Player,
         in_inhibit: ExtiInput<'static, AnyPin>,

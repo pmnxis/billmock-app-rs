@@ -11,6 +11,7 @@ use crate::types::dip_switch_config::{AppMode0V3, InhibitOverride, TimingOverrid
 
 // todo! - auto bouncer with async/await
 
+#[allow(clippy::type_complexity)]
 pub struct DipSwitch {
     gpios: (
         Input<'static, AnyPin>,
