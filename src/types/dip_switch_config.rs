@@ -224,7 +224,7 @@ pub enum AppMode {
 /// | `0`         |  `0`        | Start Signal | No, Start signal bypass to host(game pcb) side output |
 /// | `1`         |  `0`        | Start Signal | Yes, Start signal decide vend output direction for payment income from serial communication |
 /// | `0`         |  `1`        | Jam Signal   | No, Jam signal bypass to jam(game pcb) side output    |
-/// | `1`         |  `1`        | Jam Signal   | Yes, Extra serial port is forcely bind to 2P output, default port to 1P |
+/// | `1`         |  `1`        | Jam Signal   | Reserved                                              |
 ///
 /// - MODE0 (5) : Special feature disable or enable
 /// - MODE1 (6) : Swap `start` and `jam` input signal on vend side, default definition is start.
@@ -242,10 +242,10 @@ pub enum AppMode0V3 {
     /// `10` : BypassJam
     /// Normal mode with bypass JAM (swapped logically). JAM signal bypass to host(game pcb) side output.
     BypassJam = 2,
-    /// `11` : BypassJamAndExtraSerialPayment
+    /// `11` : BypassJamButReserved
     /// Bypass JAM (swapped logically). JAM signal bypass to host(game pcb) side output.
-    /// And independent of swapping signal, extra serial port is forcely bind to 2P output, default port to 1P
-    BypassJamAndExtraSerialPayment = 3,
+    /// This configuration is reserved for future usage.
+    BypassJamButReserved = 3,
 }
 
 impl AppMode0V3 {
@@ -262,8 +262,8 @@ impl defmt::Format for AppMode0V3 {
                 defmt::write!(fmt, "StartButtonDecideSerialToVend")
             }
             AppMode0V3::BypassJam => defmt::write!(fmt, "BypassJam"),
-            AppMode0V3::BypassJamAndExtraSerialPayment => {
-                defmt::write!(fmt, "BypassJamAndExtraSerialPayment")
+            AppMode0V3::BypassJamButReserved => {
+                defmt::write!(fmt, "BypassJamButReserved")
             }
         }
     }

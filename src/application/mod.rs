@@ -79,9 +79,7 @@ impl Application {
                     AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
                         Player::Undefined
                     }
-                    AppMode0V3::BypassJam | AppMode0V3::BypassJamAndExtraSerialPayment => {
-                        Player::Player1
-                    }
+                    AppMode0V3::BypassJam | AppMode0V3::BypassJamButReserved => Player::Player1,
                 };
 
                 // should be reset
@@ -142,8 +140,7 @@ impl Application {
                                     (InputPortKind::StartJam1P, InputPortKind::Start1P),
                                     (InputPortKind::StartJam2P, InputPortKind::Start2P),
                                 ],
-                                AppMode0V3::BypassJam
-                                | AppMode0V3::BypassJamAndExtraSerialPayment => &[
+                                AppMode0V3::BypassJam | AppMode0V3::BypassJamButReserved => &[
                                     (InputPortKind::StartJam1P, InputPortKind::Jam1P),
                                     (InputPortKind::StartJam2P, InputPortKind::Jam2P),
                                 ],
