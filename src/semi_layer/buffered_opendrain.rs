@@ -98,6 +98,28 @@ impl BlinkFsm {
     }
 }
 
+/// FSM for OneShotHigh
+pub struct OneShotTimer {
+    duration: u32,
+}
+
+impl OneShotTimer {
+    /// Substract `OneShotTimer`
+    fn try_substract(&self, elapsed: u32) -> Result<Self, ()> {
+        if self.duration > elapsed {
+            Ok(Self {
+                duration: self.duration - elapsed,
+            })
+        } else {
+            Err(())
+        }
+    }
+
+    const fn expect_output_pin_state(&self) -> bool {
+        true
+    }
+}
+
 pub struct AltTickTockRequest {
     pub toggle_count: u8,
     pub timing: ToggleTiming,
@@ -121,11 +143,16 @@ pub enum BufferedOpenDrainRequest {
     /// Alternative light configuration is passing with limited paramter.
     /// on/off_time  : u7(1..127) * 10 ms
     AltForeverBlink(ToggleTiming),
+    /// One Shot High
+    /// Only one high signal output with long time, u14 (1..16383) * 10 ms
+    /// Internally 10 times loop to avoid overflow
+    OneShotHigh(u16),
 }
 
 pub type RawBufferedOpenDrainRequest = u16;
 
 const BF_15_14_OTHERS: u16 = 0b00;
+const BF_15_14_ONE_SHOT_HIGH: u16 = 0b01;
 const BF_15_14_ALT_TICKTOCK: u16 = 0b10;
 const BF_15_14_ALT_FOREVER_BLINK: u16 = 0b11;
 
@@ -136,6 +163,7 @@ const BF_13_8_FOREVER_BLINK: u16 = 0b00_0011;
 
 const BF_U5_MAX: u16 = (1u16 << 5) - 1;
 const BF_U7_MAX: u16 = (1u16 << 7) - 1;
+const BF_U14_MAX: u16 = (1u16 << 14) - 1;
 
 pub struct RawBufferedOpenDrainRequestTryIntoError {
     pub inner: RawBufferedOpenDrainRequest,
@@ -179,6 +207,13 @@ impl TryFrom<RawBufferedOpenDrainRequest> for BufferedOpenDrainRequest {
                     low_ms: y * 10,
                 })),
             },
+            BF_15_14_ONE_SHOT_HIGH => {
+                // Internally 10 times loop to avoid overflow
+                match value.get_bits(0..=13) {
+                    0 => Err(RawBufferedOpenDrainRequestTryIntoError { inner: value }),
+                    high_ms => Ok(Self::OneShotHigh(high_ms)),
+                }
+            }
             _ => Err(RawBufferedOpenDrainRequestTryIntoError { inner: value }),
         }
     }
@@ -207,6 +242,11 @@ impl From<&BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
                     .set_bits(7..=13, (*high_ms / 10).min(BF_U7_MAX))
                     .set_bits(0..=6, (*low_ms / 10).min(BF_U7_MAX))
             }
+            BufferedOpenDrainRequest::OneShotHigh(high_ms) => {
+                let mut ret = 0u16;
+                *ret.set_bits(14..=15, BF_15_14_ONE_SHOT_HIGH)
+                    .set_bits(0..=13, (*high_ms / 10).min(BF_U14_MAX))
+            }
         }
     }
 }
@@ -234,6 +274,11 @@ impl From<BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
                     .set_bits(7..=13, (high_ms / 10).min(BF_U7_MAX))
                     .set_bits(0..=6, (low_ms / 10).min(BF_U7_MAX))
             }
+            BufferedOpenDrainRequest::OneShotHigh(high_ms) => {
+                let mut ret = 0u16;
+                *ret.set_bits(14..=15, BF_15_14_ONE_SHOT_HIGH)
+                    .set_bits(0..=13, (high_ms / 10).min(BF_U14_MAX))
+            }
         }
     }
 }
@@ -253,6 +298,8 @@ enum MicroHsm {
     /// Forever blink until not cancel with alternative configuartion
     /// secondary shared configuration is to saving compute resource and RAM usage.
     AltForeverBlink(BlinkFsm, ToggleTiming),
+    /// One shot high
+    OneShotHigh(OneShotTimer),
 }
 
 impl MicroHsm {
@@ -274,6 +321,9 @@ impl From<MicroHsm> for BufferedOpenDrainRequest {
             }),
             MicroHsm::ForeverBlink(_) => Self::ForeverBlink,
             MicroHsm::AltForeverBlink(_, y) => Self::AltForeverBlink(y),
+            MicroHsm::OneShotHigh(x) => {
+                Self::OneShotHigh((x.duration / 10).min(BF_U14_MAX as u32) as u16)
+            }
         }
     }
 }
@@ -307,25 +357,33 @@ impl From<(BufferedOpenDrainRequest, &'static SharedToggleTiming)> for MicroHsm 
                 },
                 x,
             ),
+            BufferedOpenDrainRequest::OneShotHigh(x) => Self::OneShotHigh(OneShotTimer {
+                duration: x as u32 * 10,
+            }),
         }
     }
 }
 
 impl MicroHsm {
-    pub fn next(&self, shared: &'static SharedToggleTiming, elapsed: u16) -> Self {
+    pub fn next(&self, shared: &'static SharedToggleTiming, elapsed: u32) -> Self {
+        let elapsed_u16 = elapsed.min(u16::MAX as u32) as u16;
+
         match self {
             Self::SetLow => Self::SetLow,
             Self::SetHigh => Self::SetHigh,
             Self::TickTock(fsm) => fsm
-                .try_substract(shared.get(), elapsed)
+                .try_substract(shared.get(), elapsed_u16)
                 .map_or(Self::default(), Self::TickTock),
             Self::AltTickTock(fsm, builtin_timing) => fsm
-                .try_substract(*builtin_timing, elapsed)
+                .try_substract(*builtin_timing, elapsed_u16)
                 .map_or(Self::default(), |f| Self::AltTickTock(f, *builtin_timing)),
-            Self::ForeverBlink(fsm) => Self::ForeverBlink(fsm.substract(shared.get(), elapsed)),
+            Self::ForeverBlink(fsm) => Self::ForeverBlink(fsm.substract(shared.get(), elapsed_u16)),
             Self::AltForeverBlink(fsm, builtin_timing) => {
-                Self::AltForeverBlink(fsm.substract(*builtin_timing, elapsed), *builtin_timing)
+                Self::AltForeverBlink(fsm.substract(*builtin_timing, elapsed_u16), *builtin_timing)
             }
+            Self::OneShotHigh(fsm) => fsm
+                .try_substract(elapsed)
+                .map_or(Self::default(), Self::OneShotHigh),
         }
     }
 
@@ -333,6 +391,7 @@ impl MicroHsm {
         match self {
             Self::TickTock(fsm) | Self::AltTickTock(fsm, _) => Some(fsm.duration),
             Self::ForeverBlink(fsm) | Self::AltForeverBlink(fsm, _) => Some(fsm.duration),
+            Self::OneShotHigh(fsm) => Some(fsm.duration.min(u16::MAX as u32) as u16),
             _ => None,
         }
     }
@@ -345,6 +404,7 @@ impl MicroHsm {
             Self::ForeverBlink(fsm) | Self::AltForeverBlink(fsm, _) => {
                 fsm.expect_output_pin_state()
             }
+            Self::OneShotHigh(fsm) => fsm.expect_output_pin_state(),
         }
     }
 
@@ -353,6 +413,7 @@ impl MicroHsm {
             Self::SetHigh | Self::SetLow => false,
             Self::TickTock(_) | Self::AltTickTock(_, _) => true,
             Self::ForeverBlink(_) | Self::AltForeverBlink(_, _) => false,
+            Self::OneShotHigh(_) => false,
         }
     }
 }
@@ -418,7 +479,7 @@ impl BufferedOpenDrain {
                     // this would be happend rarely
                     self.reflect_on_io(&hsm);
 
-                    let elapsed = (Instant::now() - last).as_millis().min(u16::MAX.into()) as u16;
+                    let elapsed = (Instant::now() - last).as_millis().min(u32::MAX.into()) as u32;
 
                     hsm = hsm.next(self.shared_timing, elapsed);
                     self.reflect_on_io(&hsm);
@@ -443,7 +504,7 @@ impl BufferedOpenDrain {
                     hsm = (y, self.shared_timing).into();
                 }
                 None => {
-                    let elapsed = (Instant::now() - last).as_millis().min(u16::MAX.into()) as u16;
+                    let elapsed = (Instant::now() - last).as_millis().min(u32::MAX.into()) as u32;
                     hsm = hsm.next(self.shared_timing, elapsed);
                 }
             }
