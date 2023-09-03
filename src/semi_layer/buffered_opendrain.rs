@@ -14,7 +14,7 @@ use embassy_time::{with_timeout, Duration, Instant, Timer};
 
 use super::timing::{SharedToggleTiming, ToggleTiming};
 
-pub const HOST_SIDE_INTERFACE_CH_SIZE: usize = 2;
+pub const HOST_SIDE_INTERFACE_CH_SIZE: usize = 4;
 pub type OpenDrainRequestChannel =
     Channel<ThreadModeRawMutex, RawBufferedOpenDrainRequest, HOST_SIDE_INTERFACE_CH_SIZE>;
 
