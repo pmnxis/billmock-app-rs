@@ -6,7 +6,7 @@
 
 use defmt::{error, warn};
 
-use super::DEFAULT_VEND_INDICATOR_TIMING_MS;
+use super::{DEFAULT_BUSY_ALPHA_TIMING_MS, DEFAULT_VEND_INDICATOR_TIMING_MS};
 use crate::boards::*;
 use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::input_port::{InputEvent, InputPortKind};
@@ -24,6 +24,7 @@ pub async fn io_bypass(board: &'static Board, event: &InputEvent, override_druat
     };
 
     let led = board.correspond_indicator(&event.port);
+    let busy = board.correspond_busy(&event.port);
 
     match (event.port, event.event) {
         (x, InputEventKind::LongPressed(0) | InputEventKind::LongPressed(1)) => {
@@ -40,6 +41,11 @@ pub async fn io_bypass(board: &'static Board, event: &InputEvent, override_druat
 
                 mul10
             };
+
+            if let Some(busy) = busy {
+                busy.one_shot_high_mul(1, led_timing, led_timing, DEFAULT_BUSY_ALPHA_TIMING_MS)
+                    .await;
+            }
 
             if let Some(led) = led {
                 led.alt_tick_tock(1, led_timing, led_timing).await;
