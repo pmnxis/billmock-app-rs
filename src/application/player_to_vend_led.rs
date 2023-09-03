@@ -9,17 +9,19 @@ use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
 use crate::types::player::Player;
 
 impl Player {
-    pub const fn to_vend_and_led(
+    pub const fn to_vend_busy_led(
         self,
         board: &'static Board,
-    ) -> (&BufferedOpenDrain, &BufferedOpenDrain) {
+    ) -> (&BufferedOpenDrain, &BufferedOpenDrain, &BufferedOpenDrain) {
         match self {
             Player::Player2 => (
                 &board.hardware.host_sides[PLAYER_2_INDEX].out_vend,
+                &board.hardware.host_sides[PLAYER_2_INDEX].out_busy,
                 &board.hardware.indicators[LED_2_INDEX],
             ),
             _ => (
                 &board.hardware.host_sides[PLAYER_1_INDEX].out_vend,
+                &board.hardware.host_sides[PLAYER_2_INDEX].out_busy,
                 &board.hardware.indicators[LED_1_INDEX],
             ),
         }

@@ -223,4 +223,12 @@ impl Board {
             _ => None, // this is optional action, thus return with None , not Err
         }
     }
+
+    pub fn correspond_busy(&'static self, port: &InputPortKind) -> Option<&BufferedOpenDrain> {
+        match port {
+            InputPortKind::Vend1P => Some(&self.hardware.host_sides[PLAYER_1_INDEX].out_busy),
+            InputPortKind::Vend2P => Some(&self.hardware.host_sides[PLAYER_2_INDEX].out_busy),
+            _ => None, // this is optional action, thus return with None , not Err
+        }
+    }
 }

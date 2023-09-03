@@ -146,7 +146,7 @@ pub enum BufferedOpenDrainRequest {
     /// One Shot High
     /// Only one high signal output with long time, u14 (1..16383) * 10 ms
     /// Internally 10 times loop to avoid overflow
-    OneShotHigh(u16),
+    OneShotHigh(u32),
 }
 
 pub type RawBufferedOpenDrainRequest = u16;
@@ -211,7 +211,7 @@ impl TryFrom<RawBufferedOpenDrainRequest> for BufferedOpenDrainRequest {
                 // Internally 10 times loop to avoid overflow
                 match value.get_bits(0..=13) {
                     0 => Err(RawBufferedOpenDrainRequestTryIntoError { inner: value }),
-                    high_ms => Ok(Self::OneShotHigh(high_ms)),
+                    high_ms => Ok(Self::OneShotHigh(10 * high_ms as u32)),
                 }
             }
             _ => Err(RawBufferedOpenDrainRequestTryIntoError { inner: value }),
@@ -245,7 +245,7 @@ impl From<&BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
             BufferedOpenDrainRequest::OneShotHigh(high_ms) => {
                 let mut ret = 0u16;
                 *ret.set_bits(14..=15, BF_15_14_ONE_SHOT_HIGH)
-                    .set_bits(0..=13, (*high_ms / 10).min(BF_U14_MAX))
+                    .set_bits(0..=13, (*high_ms / 10).min(BF_U14_MAX as u32) as u16)
             }
         }
     }
@@ -277,7 +277,7 @@ impl From<BufferedOpenDrainRequest> for RawBufferedOpenDrainRequest {
             BufferedOpenDrainRequest::OneShotHigh(high_ms) => {
                 let mut ret = 0u16;
                 *ret.set_bits(14..=15, BF_15_14_ONE_SHOT_HIGH)
-                    .set_bits(0..=13, (high_ms / 10).min(BF_U14_MAX))
+                    .set_bits(0..=13, (high_ms / 10).min(BF_U14_MAX as u32) as u16)
             }
         }
     }
@@ -321,9 +321,7 @@ impl From<MicroHsm> for BufferedOpenDrainRequest {
             }),
             MicroHsm::ForeverBlink(_) => Self::ForeverBlink,
             MicroHsm::AltForeverBlink(_, y) => Self::AltForeverBlink(y),
-            MicroHsm::OneShotHigh(x) => {
-                Self::OneShotHigh((x.duration / 10).min(BF_U14_MAX as u32) as u16)
-            }
+            MicroHsm::OneShotHigh(x) => Self::OneShotHigh(x.duration),
         }
     }
 }
@@ -357,9 +355,9 @@ impl From<(BufferedOpenDrainRequest, &'static SharedToggleTiming)> for MicroHsm 
                 },
                 x,
             ),
-            BufferedOpenDrainRequest::OneShotHigh(x) => Self::OneShotHigh(OneShotTimer {
-                duration: x as u32 * 10,
-            }),
+            BufferedOpenDrainRequest::OneShotHigh(x) => {
+                Self::OneShotHigh(OneShotTimer { duration: x })
+            }
         }
     }
 }
@@ -591,6 +589,23 @@ impl BufferedOpenDrain {
     pub async fn alt_forever_blink_timing(&self, timing: ToggleTiming) {
         self.request(BufferedOpenDrainRequest::AltForeverBlink(timing))
             .await
+    }
+
+    /// Simply order one shot high (high duration in msec) on the opendrain module.
+    pub async fn one_shot_high(&self, duration: u32) {
+        self.request(BufferedOpenDrainRequest::OneShotHigh(duration))
+            .await
+    }
+
+    /// Simply order one shot high (from other ticktock parameter) on the opendrain module.
+    pub async fn one_shot_high_mul(&self, count: u8, high_ms: u16, low_ms: u16, alpha: u16) {
+        let duration = (high_ms as u32 + low_ms as u32) * count as u32 + alpha as u32;
+        self.request(BufferedOpenDrainRequest::OneShotHigh(duration))
+            .await
+    }
+
+    pub fn get_shared_timing(&self) -> ToggleTiming {
+        self.shared_timing.get()
     }
 }
 

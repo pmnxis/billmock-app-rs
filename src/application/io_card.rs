@@ -6,7 +6,7 @@
 
 use serial_arcade_pay::*;
 
-use super::DEFAULT_VEND_INDICATOR_TIMING_MS;
+use super::{DEFAULT_BUSY_ALPHA_TIMING_MS, DEFAULT_VEND_INDICATOR_TIMING_MS};
 use crate::{boards::*, types::player::Player};
 
 #[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -78,7 +78,7 @@ impl PaymentReceive {
                 signal_count: Some(c),
                 pulse_duration: Some(d),
             }) => {
-                let (vend, led) = self.origin.to_vend_and_led(board);
+                let (vend, busy, led) = self.origin.to_vend_busy_led(board);
                 let coin_cnt = c.min(u8::MAX.into()) as u8;
                 if override_druation_force {
                     vend.tick_tock(coin_cnt).await;
@@ -89,6 +89,8 @@ impl PaymentReceive {
                     )
                     .await;
                 } else {
+                    busy.one_shot_high_mul(coin_cnt, d, d, DEFAULT_BUSY_ALPHA_TIMING_MS)
+                        .await;
                     vend.alt_tick_tock(coin_cnt, d, d).await;
                     led.alt_tick_tock(coin_cnt, d, d).await;
                 }
@@ -101,14 +103,24 @@ impl PaymentReceive {
                 pulse_duration: _,
                 // pulse_duration: Some(_d),
             }) => {
-                let (vend, led) = match p {
+                let (vend, busy, led) = match p {
                     2 => Player::Player2,
                     _ => Player::Player1,
                 }
-                .to_vend_and_led(board);
+                .to_vend_busy_led(board);
 
                 let coin_cnt = c.min(u8::MAX.into()) as u8;
 
+                // There's no easy way to get vend timing with busy, and utilize it with one shot logic
+                let timing = vend.get_shared_timing();
+
+                busy.one_shot_high_mul(
+                    coin_cnt,
+                    timing.high_ms,
+                    timing.low_ms,
+                    DEFAULT_BUSY_ALPHA_TIMING_MS,
+                )
+                .await;
                 vend.tick_tock(coin_cnt).await;
                 led.alt_tick_tock(
                     coin_cnt,

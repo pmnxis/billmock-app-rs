@@ -24,6 +24,7 @@ use crate::types::input_port::{InputEvent, InputPortKind};
 use crate::types::player::Player;
 
 pub const DEFAULT_VEND_INDICATOR_TIMING_MS: u16 = 200;
+pub const DEFAULT_BUSY_ALPHA_TIMING_MS: u16 = 10;
 
 pub struct Application {
     /// Hardware and necessary shared object
