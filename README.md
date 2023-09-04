@@ -13,9 +13,11 @@ Used rust experimentally.
 This repository is aiming three goal.
 One for development of production firmware and second is making a proof of concept that rust embedded is usable for actual embedded production. And last goal is setting some example about production-rust-embedded-code.
 
-**This project is currently under development, and some minor features are still under development.**
+**This project is currently under development, with ongoing QA testing and some optimization remaining.**
 
 ## Billmock
+Detail documentation is here [BillMock Manual](https://billmock.pmnxis.net/)
+
 It is hardware and software for the purpose of converting I/O signals related to money payment of arcade game machines for compatibility.
 
 This project began development at the request of **GPARK Co., Ltd**<sup>[4](#footnote_1)</sup> and was designed and developed for the using credit card readers in arcade game machine and compatibility of existing payment systems (open-drain-based), and is open to the public except for code in the NDA area.
@@ -52,7 +54,7 @@ The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual G
 ![BillMock feature diagram](book/src/images/BillMockDiagram.png)
 
 ## Dependencies
-See details here [dependencies](doc/dependencies.md)
+See details here [dependencies](docs/dependencies.md)
 
 ### NDA Dependencies
 To build with NDA features (GPARK Limited or own secret dependency), need adding following command on each `cargo` command.

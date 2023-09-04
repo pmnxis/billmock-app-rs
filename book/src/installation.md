@@ -22,7 +22,7 @@ When connecting to actual arcade machines, there are two installation options av
   1. 핀 아웃 목차에서 사용할 하네스를 마련합니다.
   2. 연결합니다.
 -->
-## 기존 하네스에 터미널 단자 사용
+## Cut previous harness and connect to terminal
 <!--### 기존 하네스에 터미널 단자 사용-->
 <img src="images/141r.jpg" width="300" height="250">
 
