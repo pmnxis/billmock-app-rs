@@ -132,6 +132,7 @@ impl defmt::Format for InhibitOverride {
 /// | `1`           |  `0`          | Force 50mS active low         |
 /// | `0`           |  `1`          | Force 100mS active low        |
 /// | `1`           |  `1`          | Force 200mS active low        |
+///
 /// - Timing SW `00` (Auto), for the active-low output signal,
 ///  the pulse duration provided by serial communication or
 ///  the pulse duration measurement value of parallel communication (legacy coin & bill acceptor)
