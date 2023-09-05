@@ -11,3 +11,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 - [DIP Switch Configuration](./dip_switch.md)
 - [Application Logic](./application.md)
 - [Machine installation](./installation.md)
+- [Port](./port_overview.md)
+    - [Vend side (upside)](./port_vend_side.md)
+    - [Host Side (downside)](./port_host_side.md)
+    - [Etc](./port_etc.md)
