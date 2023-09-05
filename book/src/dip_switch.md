@@ -6,7 +6,9 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 # DIP Switch
 
+<div><center>
 <img src="images/dipsw_0v4.png" width="508" height="108">
+</center></div>
 <br/>
 
 ## Overview

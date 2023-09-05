@@ -5,6 +5,9 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
 # Overview
+
+<div><center><a style="font-weight:bold" href="https://billmock.gpark.biz">한국어 매뉴얼(Korean Manual)</a></center></div>
+
 "Billmock" is a system designed to manipulate the currency payment I/O signals that arcade machines receive based on specific conditions. It is primarily used in South Korean arcade machines for tasks such as installing credit card reader or enabling programmable operations for sequential tasks based on various conditions.
 <!--
 "Billmock"은 주로 대한민국의 오락실 기계에서 사용되며, 화폐 지불 입력 신호를 특정 조건에 따라 조작하기 위해 개발된 시스템입니다. 이 시스템은 주로 카드 단말기를 설치하거나 신호 대기열에 따른 순차 작업과 같이 다양한 조건에 기반한 프로그래밍 작업이 필요한 경우에 사용됩니다.
