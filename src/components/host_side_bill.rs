@@ -10,6 +10,7 @@ use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{AnyPin, Output};
 
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
+#[cfg(not(feature = "hw_bug_host_inhibit_floating"))]
 use crate::semi_layer::buffered_wait::buffered_wait_spawn;
 use crate::semi_layer::buffered_wait::{BufferedWait, InputEventChannel, RawInputPortKind};
 use crate::semi_layer::timing::SharedToggleTiming;
@@ -18,6 +19,7 @@ use crate::types::input_port::InputPortKind;
 use crate::types::player::Player;
 
 pub struct HostSideBill {
+    #[cfg_attr(feature = "hw_bug_host_inhibit_floating", allow(unused))]
     in_inhibit: BufferedWait,
     pub out_busy: BufferedOpenDrain,
     pub out_vend: BufferedOpenDrain,
@@ -66,6 +68,8 @@ impl HostSideBill {
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.out_vend)));
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.out_jam)));
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.out_start)));
+
+        #[cfg(not(feature = "hw_bug_host_inhibit_floating"))]
         unwrap!(spawner.spawn(buffered_wait_spawn(&self.in_inhibit)));
     }
 }

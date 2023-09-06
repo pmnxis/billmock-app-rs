@@ -13,6 +13,8 @@ use static_cell::make_static;
 use self::billmock_0v2::hardware_init_0v2;
 #[cfg(feature = "hw_0v3")]
 use self::billmock_0v3::hardware_init_0v3;
+#[cfg(feature = "hw_0v4")]
+use self::billmock_0v4::hardware_init_0v4;
 use crate::components::dip_switch::DipSwitch;
 use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::{self, card_reader_device_spawn, CardReaderDevice};
@@ -40,6 +42,8 @@ const PRINT_BAR: &str = "+------------------------------------------------------
 mod billmock_0v2;
 #[cfg(feature = "hw_0v3")]
 mod billmock_0v3;
+#[cfg(feature = "hw_0v4")]
+mod billmock_0v4;
 
 pub struct Hardware {
     /// Bill paper and coin acceptor input device for 1 and 2 player sides
@@ -100,11 +104,17 @@ impl Hardware {
         peripherals: embassy_stm32::Peripherals,
         shared_resource: &'static SharedResource,
     ) -> Hardware {
-        #[cfg(feature = "hw_0v2")]
+        #[cfg(all(feature = "hw_0v2", not(feature = "hw_0v3"), not(feature = "hw_0v4")))]
         let ret = hardware_init_0v2(peripherals, shared_resource);
 
-        #[cfg(feature = "hw_0v3")]
+        #[cfg(any(
+            all(feature = "hw_0v3", not(feature = "hw_0v2"), not(feature = "hw_0v4")),
+            feature = "billmock_default"
+        ))]
         let ret = hardware_init_0v3(peripherals, shared_resource);
+
+        #[cfg(all(feature = "hw_0v4", not(feature = "hw_0v2"), not(feature = "hw_0v3")))]
+        let ret = hardware_init_0v4(peripherals, shared_resource);
 
         ret
     }
