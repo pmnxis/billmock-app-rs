@@ -35,6 +35,7 @@ pub const LED_2_INDEX: usize = 1;
 const PROJECT_NAME: &str = env!("PROJECT_NAME");
 const VERSION_STR: &str = env!("PROJECT_VERSION");
 const COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
+const COMMIT_SHORT: &str = env!("GIT_COMMIT_SHORT_HASH");
 const GIT_COMMIT_DATETIME: &str = env!("GIT_COMMIT_DATETIME");
 const PRINT_BAR: &str = "+-----------------------------------------------------------+";
 
@@ -192,7 +193,7 @@ impl Board {
         defmt::println!("{}", PRINT_BAR);
         defmt::println!("Firmware Ver : {} {}", PROJECT_NAME, VERSION_STR);
         defmt::println!("Git Hash     : {}", COMMIT_HASH);
-        defmt::println!("Git Datetime : {}", GIT_COMMIT_DATETIME);
+        defmt::println!("Git Datetime : {} | {}", GIT_COMMIT_DATETIME, COMMIT_SHORT);
         defmt::println!("{}", PRINT_BAR);
 
         let shared_resource = make_static!(SharedResource::init());

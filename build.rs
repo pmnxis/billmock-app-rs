@@ -9,6 +9,8 @@ use std::process::Command;
 use cargo_metadata::{Error, MetadataCommand};
 use git2::Repository;
 
+const IGNORE_PATH_DEP_INJ: &str = ".cargo/config.toml";
+
 fn main() -> Result<(), Error> {
     println!("cargo:rustc-link-arg-bins=--nmagic");
     println!("cargo:rustc-link-arg-bins=-Tlink.x");
@@ -33,6 +35,14 @@ fn main() -> Result<(), Error> {
     let head = repo.head().expect("Failed to get HEAD");
     let commit = head.peel_to_commit().expect("Failed to peel commit");
     let commit_hash = commit.id().to_string();
+    let commit_short_hash = String::from_utf8(
+        commit
+            .as_object()
+            .short_id()
+            .expect("Filed to get short_id")
+            .to_ascii_lowercase(),
+    )
+    .expect("Failed to convert short_id to UTF-8");
     let statuses = match repo.statuses(None) {
         Ok(statuses) => statuses,
         Err(_) => {
@@ -44,13 +54,17 @@ fn main() -> Result<(), Error> {
 
     let is_dirty = statuses.iter().any(|status| {
         let s = status.status();
-        !((s == git2::Status::CURRENT) | (s == git2::Status::IGNORED))
+        let p = status.path();
+
+        // ignore config.toml for dependency injection
+        (p != Some(IGNORE_PATH_DEP_INJ))
+            & !((s == git2::Status::CURRENT) | (s == git2::Status::IGNORED))
     });
 
-    let dirty_str = if is_dirty {
-        "-dirty".to_owned()
+    let (dirty_str, short_dirty_str) = if is_dirty {
+        ("-dirty".to_owned(), "-d".to_owned())
     } else {
-        "".to_owned()
+        ("".to_owned(), "".to_owned())
     };
 
     let output = Command::new("git")
@@ -64,6 +78,10 @@ fn main() -> Result<(), Error> {
     println!(
         "cargo:rustc-env=GIT_COMMIT_HASH={}{}",
         commit_hash, dirty_str
+    );
+    println!(
+        "cargo:rustc-env=GIT_COMMIT_SHORT_HASH={}{}",
+        commit_short_hash, short_dirty_str
     );
     println!("cargo:rustc-env=GIT_COMMIT_DATETIME={}", commit_datetime);
 

@@ -52,8 +52,8 @@ serial-arcade-pay = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
 serial-arcade-pay-impl = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
 
 [build-dependencies]
-git2 = "0.17" # Git library for Rust
-cargo_metadata = "0.17"
+git2 = "0.18" # Git library for Rust
+cargo_metadata = "0.18"
 
 [profile.release]
 # or "z"
