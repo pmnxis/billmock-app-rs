@@ -33,7 +33,7 @@ Based on BillMock-HW 0.3 and 0.4. <br/>
 If need to use old 0.2 HW, run `cargo build --features hw_0v2 --no-default-features`.
 
 ### Target hardware image
-![Actual BillMock PCB 0v3](book/src/images/BillMockPCB_0v3.jpg)
+![Actual BillMock PCB 0v3](https://billmock.gpark.biz/images/BillMockPCB_0v3.jpg)
 
 ### Hardware design
 BillMock hardware schematic repository (only pdf)
@@ -47,11 +47,14 @@ The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual G
 #### v 0.3 (2023-08-11)
 [BillMock-HW-0v3.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf)
 
-#### v 0.4 (2023-08-30)
+#### v 0.4 (2023-09-08)
 [BillMock-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v4.pdf)
 
+#### v 0.4 Mini (2023-09-12 or 2023-09-13)
+[BillMock-Mini-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch//BillMock-Mini-HW-0v4.pdf)
+
 ## Feature diagram
-![BillMock feature diagram](book/src/images/BillMockDiagram.png)
+![BillMock feature diagram](https://billmock.gpark.biz/images/billmock_logic_diagram.png)
 
 ## Dependencies
 See details here [dependencies](docs/dependencies.md)
