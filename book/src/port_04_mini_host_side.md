@@ -4,56 +4,15 @@ SPDX-FileCopyrightText: © 2023 Jinwoo Park (pmnxis@gmail.com)
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-# Host side port map
-
-## Host Side Quick Terminal
-<table>
-<tr>
-<td>
-
-![J6](https://billmock.gpark.biz/images/pcb_0v4_port/J6.png)
-</td>
-<td>
-
-|                |                |
-| -------------- | -------------- |
-| Designator     | J6  |
-|                | terminal that emulates towards the GAME IO side |
-| Connector      | 141R-2.54-8P |
-
-| **Pin #** | **Pin Name**   | Annotation                                                |
-| :-------: | -------------- | --------------------------------------------------------- |
-| `1`       | `GND`          | Product - Pole Power Input (Add' Output) |
-| `2`       | `GND`          | Product - Pole Power Input (add' Output) |
-| `3`       | `12V`          | Product + Pole Power Input                               |
-| `4`       | `V1-INHIBIT`   | Inhibit Input Signal from 1P GAME I/O |
-| `5`       | `V1-VEND`      | Emulated Bill acceptor 1P Coin Insertion Output Signal |
-| `6`       | `V2-VEND`      | Emulated Bill acceptor 2P Coin Insertion Output Signal |
-| `7`       | `V1-START`     | Emulated 1P Start Button Output Signal |
-| `8`       | `V2-START`     | Emulated 2P Start Button Output Signal |
-
-</td></tr>
-</table>
-
-- Pins are counted from the left.
-- You can also input power directly into BillMock-HW through `12V` and `GND` pins.
-- While it's more convenient to strip tde insulation from tde cable in tde middle and tden connect it to tde terminal,
-- It's recommended, whenever possible, to use a cable type that comes pre-equipped for the connection.
-
-------------
+# Host side 핀 아웃
 
 ## Host Side Player 1 Port (left)
-<table>
-<tr>
-<td>
 
-![J5](https://billmock.gpark.biz/images/pcb_0v4_port/J5.png)
-</td>
-<td>
+![J3](https://billmock.gpark.biz/images/pcb_0v4_mini_port/J3.png)
 
 |                |                |
 | -------------- | -------------- |
-| Designator     | J5  |
+| Designator     | J3  |
 |                | Emulated Player 1 side connector towards the GAME IO side |
 | Connector      | 141R-2.54-8P |
 
@@ -70,8 +29,6 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 | `9`       | `12V`          | Product + Pole Power Input                             |
 | `10`      | `GND`          | Product - Pole Power Input                             |
 
-</td></tr>
-</table>
 
 - Pins are counted from the left.
 - You can also input power directly into BillMock-HW through `12V` and `GND` pins.
@@ -81,17 +38,12 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 ------------
 
 ## Host Side Player 2 Port (right)
-<table>
-<tr>
-<td>
 
-![J4](https://billmock.gpark.biz/images/pcb_0v4_port/J4.png)
-</td>
-<td>
+![J2](https://billmock.gpark.biz/images/pcb_0v4_mini_port/J2.png)
 
 |                |                |
 | -------------- | -------------- |
-| Designator     | J4  |
+| Designator     | J2  |
 |                | Emulated Player 2 side connector towards the GAME IO side |
 | Connector      | 141R-2.54-8P |
 
@@ -107,9 +59,6 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 | `8`       | `12V`          | Product + Pole Power Input                             |
 | `9`       | `12V`          | Product + Pole Power Input                             |
 | `10`      | `GND`          | Product - Pole Power Input                             |
-
-</td></tr>
-</table>
 
 - Pins are counted from the left.
 - You can also input power directly into BillMock-HW through `12V` and `GND` pins.

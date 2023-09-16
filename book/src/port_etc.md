@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: © 2023 Jinwoo Park (pmnxis@gmail.com)
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-# Port - ETC
+# Port - Miscellaneous
 
 ## Credit Card Reader Port
 
@@ -12,7 +12,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 <tr>
 <td>
 
-![J3](./images/pcb_0v4_port/J3.png)
+![J3](https://billmock.gpark.biz/images/pcb_0v4_port/J3.png)
 </td>
 <td>
 
@@ -59,7 +59,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 <tr>
 <td>
 
-![J1](./images/pcb_0v4_port/J1.png)
+![J1](https://billmock.gpark.biz/images/pcb_0v4_port/J1.png)
 </td>
 <td>
 
@@ -99,7 +99,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 <tr>
 <td>
 
-![DEBUG](./images/pcb_0v4_port/DEBUG.png)
+![DEBUG](https://billmock.gpark.biz/images/pcb_0v4_port/debug_port.png)
 </td>
 <td>
 

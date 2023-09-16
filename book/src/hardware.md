@@ -8,12 +8,11 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 | top side | bottom side |
 | ---- | ---- |
-| ![top side image](images/pcb_top_0v4.png) | ![bottom side image](images/pcb_bot_0v4.png) | 
+| ![top side image](https://billmock.gpark.biz/images/pcb_top_0v4.png) | ![bottom side image](https://billmock.gpark.biz/images/pcb_bot_0v4.png) | 
 
-This images are 0.4 hardware 3D rendering
+This https://billmock.gpark.biz/images are 0.4 hardware 3D rendering
 
 ## Specifications
-<!--제품 사양-->
 
 |             |              |
 | ----------- | ------------ |
@@ -28,10 +27,6 @@ This images are 0.4 hardware 3D rendering
 | Pouwer Output | 5V (Peak 2.2A 300mS trip, 1.1A nominal MAX) - Credit card reader power |
 
 ※ The input power allows up to 16V, but please be cautious as it is directly passed through to the bill handling device.
-
-<!-- 
-입력전원은 16V까지 사용이 가능하나 지폐기쪽 전원과 그대로 반영이 되므로, 주의가 필요
--->
 
 ## Hardware design
 BillMock hardware schematic repository (only pdf) : [BillMock Hardware PDF Release](https://github.com/pmnxis/BillMock-HW-RELEASE)

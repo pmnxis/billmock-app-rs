@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 # DIP Switch
 
 <div><center>
-<img src="images/dipsw_0v4.png" width="508" height="108">
+<img src="https://billmock.gpark.biz/images/dipsw_0v4.png" width="508" height="108">
 </center></div>
 <br/>
 
@@ -63,7 +63,7 @@ of a device that has under the maintenance in the field engineer.
 | `0`         |  `0`        | Start Signal | No, Start signal bypass to host(game pcb) side output |
 | `1`         |  `0`        | Start Signal | Yes, Start signal decide vend output direction for payment income from serial communication |
 | `0`         |  `1`        | Jam Signal   | No, Jam signal bypass to jam(game pcb) side output    |
-| `1`         |  `1`        | Jam Signal   | Reserved                                              |
+| `1`         |  `1`        | Invalid      | `DisplayRom`, disallow any other action               |
 
 - MODE0 (5) : Special feature disable or enable
 - MODE1 (6) : Swap `start` and `jam` input signal on vend side, default definition is start.
@@ -78,6 +78,8 @@ of a device that has under the maintenance in the field engineer.
 - `10` : BypassJam
     > Normal mode with bypass JAM (swapped logically). JAM signal bypass to host(game pcb) side output.
 
-- `11` : BypassJamButReserved
-    > Bypass JAM (swapped logically). JAM signal bypass to host(game pcb) side output.
-    > This configuration is reserved for future usage.
+- `11`: DisplayRom
+    > ![display rom screen](https://billmock.gpark.biz/images/dip_switch_rom_disp_enus.png)
+    > - It displays information about BillMock's firmware, the card terminal's TID, and accumulated card and bill (coin) counts. It can be used as an alternative to a magnetic coin meter.
+    > - If the connected card terminal's TID changes, the accumulated card count will be reset to 0.
+    > For detailed information, please refer to [DisplayRom Detailed Information](./feature_disp_rom.md).\
