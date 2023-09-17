@@ -93,6 +93,8 @@ impl Default for TinyGenericInhibitInfo {
 pub enum GenericPaymentRecv {
     /// The device alert alive itself
     Heartbeat,
+    /// Initial handshake, some device request information to POS
+    InitialHandshake,
     /// Ack signal
     Ack,
     /// Nack signal
@@ -113,6 +115,8 @@ pub enum GenericPaymentRecv {
 pub enum GenericPaymentRequest {
     /// Heratbeat signal from MCU to card reader device
     Heartbeat,
+    /// Response of InitialHandshake
+    ResponseInitialHandshake,
     /// Common ACK
     Ack,
     /// Common NACK
@@ -125,6 +129,9 @@ pub enum GenericPaymentRequest {
     SetGlobalInhibit(bool),
     /// Request
     SetInhibit(TinyGenericInhibitInfo),
+    /// DisplayRom
+    // Display ROM, best approach is passing all arguments, to reduce queue usage, just use shared memory (mutex)
+    DisplayRom,
 }
 
 #[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]

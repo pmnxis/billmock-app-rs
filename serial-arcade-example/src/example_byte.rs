@@ -155,7 +155,9 @@ impl AnyExampleDevice for ExampleByteRecv {
 
     fn request_form(request: &GenericPaymentRequest, tx_inner_buff: &mut [u8]) -> Option<usize> {
         let (tx_cmd, len_u8) = match request {
-            GenericPaymentRequest::Heartbeat => (BYTE_CMD_HEARTBEAT, 1u8),
+            GenericPaymentRequest::Heartbeat | GenericPaymentRequest::ResponseInitialHandshake => {
+                (BYTE_CMD_HEARTBEAT, 1u8)
+            }
             GenericPaymentRequest::Ack => (BYTE_CMD_ACK, 1u8),
             GenericPaymentRequest::Nack => (BYTE_CMD_NACK, 1u8),
             GenericPaymentRequest::CheckBusy => (BYTE_CMD_CHECK_BUSY_STATE, 1u8),
@@ -170,6 +172,10 @@ impl AnyExampleDevice for ExampleByteRecv {
             GenericPaymentRequest::SetInhibit(x) => {
                 tx_inner_buff[INNER_DATA_TEXT_OFFSET] = x.get_raw();
                 (BYTE_CMD_SET_INHIBIT, 2u8)
+            }
+            GenericPaymentRequest::DisplayRom => {
+                // skip implementation because, this is just example code
+                unimplemented!("DisplayRom not implementated");
             }
         };
 
