@@ -66,6 +66,9 @@ impl CardReaderDevice {
                             if let Err(e_dma) = tx.write(&tx_buf[0..len]).await {
                                 defmt::error!("USART TX error : {:?}", e_dma);
                             }
+                            // for debug
+                            // defmt::debug!("UART write {}: {:02X}", len, tx_buf[0..len]);
+                            // end of for debug
                         }
                         Err(e) => {
                             defmt::error!("GEN TX error : {:?}", e);
@@ -85,8 +88,8 @@ impl CardReaderDevice {
             match with_timeout(Duration::from_millis(200), rx.read(&mut rx_buf)).await {
                 Ok(Ok(rx_len)) => {
                     // for debug
-                    let cutted_rx_buf = &rx_buf[..rx_len];
-                    defmt::debug!("UART READ {}: {:02X}", rx_len, &cutted_rx_buf);
+                    // let cutted_rx_buf = &rx_buf[..rx_len];
+                    // defmt::debug!("UART READ {}: {:02X}", rx_len, &cutted_rx_buf);
                     // end of debug
 
                     match SerialPayVarient::parse_rx(&rx_buf, rx_len) {

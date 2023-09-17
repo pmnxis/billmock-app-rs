@@ -50,7 +50,7 @@ impl Application {
         let mut mutual_inhibit = MutualInhibit::new();
 
         loop {
-            // timing flag would be used in future implemenation.
+            // timing flag would be used in future implementation.
             // reading dipsw will be changed to actor model
             let (inhibit_latest, timing_latest, appmode_latest) = hardware.dipsw.read();
 
@@ -93,6 +93,13 @@ impl Application {
             }
 
             if let Ok(x) = hardware.card_reader.recv_channel.try_receive() {
+                if x == GenericPaymentRecv::InitialHandshake {
+                    hardware
+                        .card_reader
+                        .send(serial_arcade_pay::GenericPaymentRequest::ResponseInitialHandshake)
+                        .await;
+                }
+
                 match (
                     appmode,
                     income_backup.is_some(),
