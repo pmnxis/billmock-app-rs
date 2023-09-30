@@ -10,6 +10,8 @@
 
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
+use embassy_stm32::i2c::I2c;
+use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::{Config as UsartConfig, Uart};
 use embassy_stm32::{bind_interrupts, peripherals};
 use {defmt_rtt as _, panic_probe as _};
@@ -27,6 +29,7 @@ use crate::types::player::Player;
 
 bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
+    I2C1 => embassy_stm32::i2c::InterruptHandler<peripherals::I2C1>;
 });
 
 static mut USART2_RX_BUF: [u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE] =
@@ -59,6 +62,17 @@ pub fn hardware_init_mini_0v4(
         .split();
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
+
+    let mut i2c = I2c::new(
+        p.I2C1,
+        p.PB8,
+        p.PB9,
+        Irqs,
+        p.DMA1_CH4,
+        p.DMA1_CH3,
+        Hertz(100_000),
+        Default::default(),
+    );
 
     let async_input_event_ch = &shared_resource.async_input_event_ch.channel;
 

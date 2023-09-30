@@ -117,7 +117,7 @@ impl Hardware {
         ))]
         let ret = hardware_init_0v2(peripherals, shared_resource);
 
-        #[cfg(any(
+        #[cfg(all(
             all(
                 feature = "hw_0v3",
                 not(feature = "hw_0v2"),
@@ -136,7 +136,7 @@ impl Hardware {
         ))]
         let ret = hardware_init_0v4(peripherals, shared_resource);
 
-        #[cfg(all(
+        #[cfg(any(
             feature = "hw_mini_0v4",
             not(feature = "hw_0v2"),
             not(feature = "hw_0v3"),

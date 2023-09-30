@@ -10,3 +10,5 @@ pub(crate) mod start_button;
 pub(crate) mod vend_side_bill;
 
 pub(crate) mod serial_device;
+
+pub(crate) mod eeprom;

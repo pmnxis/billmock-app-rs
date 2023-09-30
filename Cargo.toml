@@ -13,11 +13,12 @@ description = "application side of billmock hardware, powered by rust-embedded"
 [features]
 default = ["billmock_default"]
 hw_bug_host_inhibit_floating = [] # #19 bug (https://github.com/pmnxis/billmock-app-rs/issues/19)
-billmock_default = ["hw_0v3"] # To use rust-analzyer utilizing noDefaultFeatures on vscode
+billmock_default = ["hw_mini_0v4"] # To use rust-analzyer utilizing noDefaultFeatures on vscode
+eeprom = []
 hw_0v2 = ["hw_bug_host_inhibit_floating"]
 hw_0v3 = ["hw_bug_host_inhibit_floating"]
-hw_0v4 = []
-hw_mini_0v4 = []
+hw_0v4 = ["eeprom"]
+hw_mini_0v4 = ["eeprom"]
 
 [dependencies]
 embassy-sync = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "75cae09e79cbc0d494240235edda13f81e098e18", features = ["defmt"] }
@@ -37,6 +38,7 @@ static_cell = { version = "1.2", features = ["nightly"] }
 num_enum = { version = "0.7.0", default-features = false } # Application specific import (only `no_std` crates alllowed)
 bit_field = "0.10"
 nonmax = { version = "0.5.3", default-features = false, features = [] } # to use common NonMax
+static_assertions = "1.1.0"
 
 # Application specific library
 
