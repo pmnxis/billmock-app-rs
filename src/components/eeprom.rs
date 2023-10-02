@@ -66,12 +66,32 @@ assert_eq_size!(FaultLog, [u8; 6]);
 // |   +-----------------------------------------+                                                    |
 // +--------------------------------------------------------------------------------------------------+
 //
-//   Single Page Structure, M24C16's single page size is 16 bytes.
 //   Write cycle endurance of each page is 1,200,000 ~ 4,000,0000
+//   Single Page Structure, M24C16's single page size is 16 bytes.
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 //   | 0x0 | 0x1 | 0x2 | 0x3 | 0x4 | 0x5 | 0x6 | 0x7 | 0x8 | 0x9 | 0xA | 0xB | 0xC | 0xD | 0xE | 0xF |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-//   | last_time : Instant (inner:u64) |   Actual Data (Max 6 byte-size)   |   CRC16   |
+//   | last_time : embassy_time::Instant (inner:u64) |   Actual Data (Max 6 byte-size)   |   CRC16   |
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//
+//   Daul Page Structure, M24C16's each single page size is 16 bytes.
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//   | 0x0 | 0x1 | 0x2 | 0x3 | 0x4 | 0x5 | 0x6 | 0x7 | 0x8 | 0x9 | 0xA | 0xB | 0xC | 0xD | 0xE | 0xF |
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//   | last_time : embassy_time::Instant (inner:u64) |                 Actual Data                   |
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//   |                   (Max 6+14 = 20 byte-size)    Actual Data                        |   CRC16   |
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//
+//   Triple Page Structure, M24C16's each single page size is 16 bytes.
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//   | 0x0 | 0x1 | 0x2 | 0x3 | 0x4 | 0x5 | 0x6 | 0x7 | 0x8 | 0x9 | 0xA | 0xB | 0xC | 0xD | 0xE | 0xF |
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//   | last_time : embassy_time::Instant (inner:u64) |                 Actual Data                   |
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//   |                          (Max 6+16+14 = 36 byte-size)    Actual Data                          |
+//   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+//   |                                    Actual Data                                    |   CRC16   |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 
 pub struct MemStorage {
@@ -83,12 +103,6 @@ pub struct MemStorage {
     pub fault_log: FaultLog,
     pub raw_terminal: RawTerminalId,
     pub card_reader_port_backup: CardReaderPortBackup,
-}
-
-// Novella part
-
-pub struct MemStruct {
-    last_time: u64, // this can be change to u32 version, but need trait degrade
 }
 
 /// Tiny control block for manage single section, it include what page is latest and is dirty state
@@ -312,17 +326,6 @@ impl NovellaRw for NovellaSelector<CardReaderPortBackup> {
     }
 }
 
-pub enum NvMemSectionReturn {
-    P1CardCnt(u32),                    // 1*16, u32+
-    P2CardCnt(u32),                    // 1*16, u32+ 1
-    P1CoinCnt(u32),                    // 1*16, u32+ 1
-    P2CoinCnt(u32),                    // 1*16, u32 + 1
-    FaultLog(FaultLog),                // 1*16, Not determined 6 bytes + 1
-    HwBootCount(u32),                  // 1*08, u32 + 1
-    TerminalId(RawTerminalId),         // 2*08, 13 bytes + 1
-    CardPortBackup(RawCardPortBackup), // 3*08, 32 bytes (4+4)*4 + 1
-}
-
 impl NovellaSectionControlBlock {
     pub const fn new() -> Self {
         Self { inner: 0x00 }
@@ -332,8 +335,16 @@ impl NovellaSectionControlBlock {
         self.inner |= 1 << 7;
     }
 
+    pub fn clr_dirty(&mut self) {
+        self.inner &= !(1 << 7);
+    }
+
     pub fn is_dirty(&self) -> bool {
         (self.inner & (1 << 7)) != 0
+    }
+
+    fn set_robin(&mut self, robin: RawNvRobin) {
+        self.inner = (self.inner & (1 << 7)) | (robin & !(1 << 7))
     }
 
     pub fn get_robin(&self) -> RawNvRobin {
@@ -382,6 +393,9 @@ const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
 const WAIT_DURATION_PER_PAGE: Duration = Duration::from_millis(5); // heuristic value
 const CHECKSUM_SIZE: usize = core::mem::size_of::<Checksum>();
 const TIMESTAMP_SIZE: usize = core::mem::size_of::<Instant>();
+const TOTAL_SLOT_NUM: usize = 96; // should be calculated in compile time
+const TOTAL_SLOT_ARR_LEN: usize =
+    (TOTAL_SLOT_NUM + core::mem::size_of::<u8>() - 1) / core::mem::size_of::<u8>();
 
 // static EEPROM_WAIT_DEADLINE: Instant =
 //     unsafe { MaybeUninit::uninit().assume_init() };
@@ -469,12 +483,14 @@ pub enum NovellaInitError {
     FaultChecksum,
 }
 
+#[derive(PartialEq)]
 pub enum NovellaReadError {
     FaultChecksum,
     MissingEeprom,
     Unknown,
 }
 
+#[derive(PartialEq)]
 pub enum NovellaWriteError {
     Wearout,
     MissingEeprom,
@@ -640,6 +656,7 @@ impl Novella {
         let slot_mem = unsafe { cb.get_data_raw_slice(kind) };
 
         let mut checksum_expected: Checksum = 0;
+        crc.reset();
 
         // Write Oeration
         for page_idx in 0..slot_size {
@@ -704,6 +721,7 @@ impl Novella {
 
         // Read for check, do not copy value to MemStorage
         let mut checksum_double_expected: Checksum = 0;
+        crc.reset();
 
         for page_idx in 0..slot_size {
             // Set eeprom data address
@@ -780,24 +798,13 @@ impl Novella {
         } else {
             Ok(())
         }
+        // <- MUTEX SECTION END HERE ->
     }
-
-    // // at the end, last buffer filled should contain Checksum.
-    // let checksum_given = unsafe {
-    //     (buffer[PAGE_SIZE - CHECKSUM_SIZE..PAGE_SIZE].as_ptr() as *const Checksum).read()
-    // };
-
-    // if checksum_given == checksum_expected {
-    //     Ok(slot_timestamp)
-    // } else {
-    //     Err(NovellaReadError::FaultChecksum)
-    // }
-    // <- MUTEX SECTION END HERE ->
 
     /// when success return marked last time
     /// Success to detect eeprom but it's filled in 0xFF or 0xFF are initial factory value, return NovellaInitError::FirstBoot
     /// initialization is not using async/await for safety
-    pub async fn init(&self) -> Result<Instant, NovellaInitError> {
+    pub async fn init(&self, noref_eeprom_latest: bool) -> Result<Instant, NovellaInitError> {
         #[inline]
         fn consider_initial_timestamp(page_idx: u8) -> bool {
             page_idx == 0
@@ -811,103 +818,88 @@ impl Novella {
         let bus = unsafe { &mut *self.bus.get() };
         let crc = unsafe { &mut *self.crc.get() };
         let buffer: &mut [u8] = unsafe { &mut *self.buffer.get() };
+        let mut broken_map_idx = 0;
+        let mut broken_map = [0u8; TOTAL_SLOT_ARR_LEN];
+        let mut latest = Instant::from_ticks(0); // guarantees smallest
+        let mut fault_checksum_count = 0;
 
-        // self.mem_storage.lock(|cb| {
-        //     let cb = &mut *cb.borrow_mut();
+        for sect_idx in 0..SECTION_TABLE.len() {
+            let kind = NvMemSectionKind::from(sect_idx as u8);
+            let (mut latest_per_sector, mut latest_slot) = (Instant::from_ticks(0), None);
 
-        //     // lazy zero wipe init (is this really need?)
-        //     *cb = NovellaModuleControlBlock::default();
+            for slot_idx in 0..SECTION_TABLE[sect_idx].slot_num {
+                match self.raw_slot_read(kind, slot_idx).await {
+                    Ok(timestamp) => {
+                        if latest_per_sector <= timestamp {
+                            latest_per_sector = timestamp;
+                            latest_slot = Some(slot_idx);
+                        }
 
-        //     let mut latest = Instant::from_ticks(0); // guarantees smallest
+                        if latest < timestamp {
+                            latest = timestamp;
+                        }
+                    }
+                    Err(NovellaReadError::FaultChecksum) | Err(NovellaReadError::Unknown) => {
+                        broken_map[broken_map_idx >> 3] |= 1 << (broken_map_idx & 0x7);
+                        fault_checksum_count += 1;
+                    }
+                    Err(NovellaReadError::MissingEeprom) => {
+                        return Err(NovellaInitError::MissingEeprom);
+                    }
+                }
 
-        //     // crc.reconfigure() // not exposed as public for now
-        //     let mut fail_count = 0;
+                broken_map_idx += 1;
+            }
 
-        //     for sect_idx in 0..SECTION_NUM {
-        //         let (mut latest_per_sector, mut latest_slot) = (Instant::from_ticks(0), None);
-        //         let mut sect_real_data_reads = 0;
-        //         let kind = NvMemSectionKind::from(sect_idx as u8);
-        //         let slot_mem = unsafe { cb.get_data_raw_slice(kind) };
+            let mut mem = self.mem_storage.lock().await;
 
-        //         for slot_idx in 0..SECTION_TABLE[sect_idx].slot_num {
-        //             let data_address: u8 = SECTION_TABLE[sect_idx].sect_start_page
-        //                 + SECTION_TABLE[sect_idx].slot_size * slot_idx;
-        //             let data_address_slice = data_address.to_be_bytes();
+            let final_slot = if let Some(latest_slot) = latest_slot {
+                // read again for fill latest value on MemStorage.
+                self.raw_slot_read(kind, latest_slot).await; //<- Error handling here.
+                latest_slot
+            } else {
+                unsafe {
+                    mem.get_data_raw_slice(kind).fill(0x00);
+                }
+                0
+            };
+            mem.controls[sect_idx].set_robin(final_slot);
+            mem.controls[sect_idx].clr_dirty();
+        }
 
-        //             let slot_size = SECTION_TABLE[sect_idx].slot_size;
-        //             let mut real_data_left = SECTION_TABLE[sect_idx].real_data_size as usize;
-        //             let mut slot_timestamp = Instant::from_ticks(0);
-        //             let mut checksum_expected: u16 = 0;
+        // Rerun for-loop for following reason,
+        // Before run second loop, need latest timestamp from whole slots in all sections,
+        // and latest index in each section.
 
-        //             for page_idx in 0..slot_size {
-        //                 novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
-        //                 let a = bus.blocking_write_read_timeout(
-        //                     ROM_R_ADDRESS,
-        //                     &data_address_slice,
-        //                     buffer,
-        //                     novella_i2c_polling_check_timeout,
-        //                 );
+        broken_map_idx = 0;
+        for sect_idx in 0..SECTION_TABLE.len() {
+            let kind = NvMemSectionKind::from(sect_idx as u8);
 
-        //                 if consider_initial_timestamp(page_idx) {
-        //                     // Grab time::Instant of slot
-        //                     unsafe {
-        //                         slot_timestamp =
-        //                             (buffer[0..TIMESTAMP_SIZE].as_ptr() as *const Instant).read();
-        //                     }
-        //                 }
+            for slot_idx in 0..SECTION_TABLE[sect_idx].slot_num {
+                if (broken_map[broken_map_idx >> 3] & (1 << (broken_map_idx & 0x7))) != 0 {
+                    // found broken slot
+                    let renew_timestamp = if noref_eeprom_latest {
+                        Instant::now()
+                    } else {
+                        // Is this really right? need consider elapsed usage later.
+                        Instant::now() + Duration::from_ticks(latest.as_ticks())
+                    };
+                    if self.raw_slot_write(kind, slot_idx, renew_timestamp).await
+                        == Err(NovellaWriteError::MissingEeprom)
+                    {
+                        return Err(NovellaInitError::MissingEeprom);
+                    }
+                }
 
-        //                 // copy [slot_real_data_reads..MAX(..)]
-        //                 let start_read =
-        //                     consider_initial_timestamp(page_idx) as usize * TIMESTAMP_SIZE;
-        //                 let max_real_data_in_page: usize = PAGE_SIZE
-        //                     - start_read
-        //                     - (consider_tailing_checksum(slot_size, page_idx) as usize
-        //                         * CHECKSUM_SIZE);
-        //                 assert!((max_real_data_in_page > PAGE_SIZE)); // need compile time assertion
+                broken_map_idx += 1;
+            }
+        }
 
-        //                 let size_can_read = max_real_data_in_page.min(real_data_left as usize);
-
-        //                 let slot_mem_start =
-        //                     SECTION_TABLE[sect_idx].real_data_size as usize - real_data_left;
-        //                 let src = &buffer[start_read..start_read + size_can_read];
-
-        //                 for i in 0..size_can_read {
-        //                     // instead of `*(dst++) = *(src++)`
-        //                     slot_mem[slot_mem_start + i] = src[i];
-        //                     // Crc Trait return u32 only, thus type casting to Checksum
-        //                     checksum_expected = crc.feed_byte(src[i]) as Checksum;
-        //                 }
-
-        //                 real_data_left -= size_can_read;
-
-        //                 // double condition for safety
-        //                 if (slot_size <= 1) || (slot_size == (page_idx - 1)) {
-        //                     let checksum_given = unsafe {
-        //                         (buffer[PAGE_SIZE - CHECKSUM_SIZE..PAGE_SIZE].as_ptr()
-        //                             as *const Checksum)
-        //                             .read()
-        //                     };
-
-        //                     if checksum_given == checksum_expected {
-        //                         if latest_per_sector < slot_timestamp {
-        //                             latest_per_sector = slot_timestamp;
-        //                             latest_slot = Some(slot_idx);
-        //                         }
-
-        //                         if latest < slot_timestamp {
-        //                             latest = slot_timestamp;
-        //                         }
-        //                     } else {
-        //                         fail_count += 1;
-
-        //                         // reset
-        //                         slot_mem.fill(0);
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // });
-        Err(NovellaInitError::FirstBoot)
+        if fault_checksum_count == TOTAL_SLOT_NUM {
+            Err(NovellaInitError::FirstBoot)
+        } else {
+            // After receive latest instant, driver should re-suit given value.
+            Ok(latest)
+        }
     }
 }
