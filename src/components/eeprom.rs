@@ -15,7 +15,7 @@ use embassy_stm32::i2c::I2c;
 use embassy_stm32::peripherals::{self};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::mutex::Mutex;
-use embassy_time::{Duration, Instant};
+use embassy_time::{Duration, Instant, Timer};
 use serial_arcade_pay::backup_types::*;
 use static_assertions::*;
 use static_cell::StaticCell;
@@ -327,19 +327,19 @@ impl NovellaRw for NovellaSelector<CardReaderPortBackup> {
 }
 
 impl NovellaSectionControlBlock {
-    pub const fn new() -> Self {
+    const fn new() -> Self {
         Self { inner: 0x00 }
     }
 
-    pub fn set_dirty(&mut self) {
+    fn set_dirty(&mut self) {
         self.inner |= 1 << 7;
     }
 
-    pub fn clr_dirty(&mut self) {
+    fn clr_dirty(&mut self) {
         self.inner &= !(1 << 7);
     }
 
-    pub fn is_dirty(&self) -> bool {
+    fn is_dirty(&self) -> bool {
         (self.inner & (1 << 7)) != 0
     }
 
@@ -347,20 +347,19 @@ impl NovellaSectionControlBlock {
         self.inner = (self.inner & (1 << 7)) | (robin & !(1 << 7))
     }
 
-    pub fn get_robin(&self) -> RawNvRobin {
+    fn get_robin(&self) -> RawNvRobin {
         self.inner & !(1 << 7)
     }
 
-    pub fn test_and_robin(&mut self) {
+    fn test_and_robin(&mut self, section_info: &NvSectionInfo) -> Option<RawNvRobin> {
         if !self.is_dirty() {
+            None
         } else {
-            self.inner += 1;
-            self.set_dirty()
+            let ret = (section_info.slot_size - 1) & (self.inner + 1);
+            self.inner = ret;
+            self.set_dirty();
+            Some(ret)
         }
-    }
-
-    fn get_rom_address(&self, section_info: &NvSectionInfo) -> EepromAddress {
-        section_info.sect_start_page + (self.get_robin() & (section_info.slot_num - 1))
     }
 }
 
@@ -389,7 +388,7 @@ const PAGE_SIZE: usize = 16;
 const SECTION_NUM: usize = 8;
 const ROM_R_ADDRESS: u8 = 0b1010_0001;
 const ROM_W_ADDRESS: u8 = 0b1010_0000;
-const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
+// const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
 const WAIT_DURATION_PER_PAGE: Duration = Duration::from_millis(5); // heuristic value
 const CHECKSUM_SIZE: usize = core::mem::size_of::<Checksum>();
 const TIMESTAMP_SIZE: usize = core::mem::size_of::<Instant>();
@@ -477,10 +476,19 @@ impl NovellaModuleControlBlock {
     }
 }
 
+pub enum NovellaInitOk {
+    /// Success for all slots
+    Success(Instant),
+    /// Partially successd, second parameter is fail count
+    PartialSucess(Instant, usize),
+    /// Assume first boot for this hardware
+    FirstBoot,
+}
+
 pub enum NovellaInitError {
     FirstBoot,
     MissingEeprom,
-    FaultChecksum,
+    // FaultChecksum,
 }
 
 #[derive(PartialEq)]
@@ -804,7 +812,7 @@ impl Novella {
     /// when success return marked last time
     /// Success to detect eeprom but it's filled in 0xFF or 0xFF are initial factory value, return NovellaInitError::FirstBoot
     /// initialization is not using async/await for safety
-    pub async fn init(&self, noref_eeprom_latest: bool) -> Result<Instant, NovellaInitError> {
+    pub async fn init(&self, noref_eeprom_latest: bool) -> Result<NovellaInitOk, NovellaInitError> {
         #[inline]
         fn consider_initial_timestamp(page_idx: u8) -> bool {
             page_idx == 0
@@ -895,11 +903,49 @@ impl Novella {
             }
         }
 
-        if fault_checksum_count == TOTAL_SLOT_NUM {
-            Err(NovellaInitError::FirstBoot)
-        } else {
-            // After receive latest instant, driver should re-suit given value.
-            Ok(latest)
+        match fault_checksum_count {
+            0 => Ok(NovellaInitOk::Success(latest)),
+            TOTAL_SLOT_NUM => Ok(NovellaInitOk::FirstBoot),
+            x => Ok(NovellaInitOk::PartialSucess(latest, fault_checksum_count)),
         }
     }
+
+    async fn run(&self) {
+        loop {
+            for sect_idx in 0..SECTION_TABLE.len() {
+                let kind = NvMemSectionKind::from(sect_idx as u8);
+
+                if let Some(next_slot) = self.mem_storage.lock().await.controls[sect_idx]
+                    .test_and_robin(&SECTION_TABLE[sect_idx])
+                {
+                    defmt::debug!("EEPROM write on [{}][0x{:02X}]", sect_idx, next_slot);
+                    match self.raw_slot_write(kind, next_slot, Instant::now()).await {
+                        Ok(_) => {
+                            self.mem_storage.lock().await.controls[sect_idx].clr_dirty();
+                            defmt::debug!("success!");
+                        }
+                        Err(NovellaWriteError::MissingEeprom) => {
+                            self.mem_storage.lock().await.controls[sect_idx].clr_dirty();
+                            defmt::error!("MissingEeprom");
+                        }
+                        Err(NovellaWriteError::Wearout) => {
+                            // try next time and slot
+                            defmt::error!("Wearout, T_T try next slot later");
+                        }
+                        Err(NovellaWriteError::Unknown) => {
+                            // try next time and slot
+                            defmt::error!("Unknown, ?_? try next slot later");
+                        }
+                    }
+                }
+            }
+
+            Timer::after(Duration::from_secs(2));
+        }
+    }
+}
+
+#[embassy_executor::task(pool_size = 1)]
+pub async fn novella_spawn(instance: &'static Novella) {
+    instance.run().await
 }
