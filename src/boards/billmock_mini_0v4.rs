@@ -8,6 +8,7 @@
 //! The code follows on version mini 0.4 schematic
 //! https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-Mini-HW-0v4.pdf
 
+use embassy_stm32::crc::{Config as CrcConfig, Crc, InputReverseConfig};
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
 use embassy_stm32::i2c::I2c;
@@ -20,6 +21,7 @@ use super::{Hardware, SharedResource};
 use super::{PLAYER_1_INDEX, PLAYER_2_INDEX};
 use crate::components;
 use crate::components::dip_switch::DipSwitch;
+use crate::components::eeprom::Novella;
 use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::CardReaderDevice;
 use crate::components::vend_side_bill::VendSideBill;
@@ -73,6 +75,12 @@ pub fn hardware_init_mini_0v4(
         Hertz(100_000),
         Default::default(),
     );
+
+    let Ok(crc_config) = CrcConfig::new(InputReverseConfig::Halfword, false, 0x1234) else {
+        panic!("Something went horribly wrong")
+    };
+
+    let mut crc = Crc::new(p.CRC, crc_config);
 
     let async_input_event_ch = &shared_resource.async_input_event_ch.channel;
 
@@ -156,5 +164,6 @@ pub fn hardware_init_mini_0v4(
             Input::new(p.PB12.degrade(), Pull::Up), // DIPSW5
         ),
         card_reader: CardReaderDevice::new(usart2_tx, usart2_rx),
+        eeprom: Novella::const_new(i2c, crc),
     }
 }

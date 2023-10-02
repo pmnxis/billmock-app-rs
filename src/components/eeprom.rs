@@ -121,6 +121,7 @@ type Checksum = u16;
 
 #[repr(u8)]
 #[derive(Clone, Copy)]
+#[allow(unused)]
 pub enum NvMemSectionKind {
     P1CardCnt,      // 1*16, u32
     P2CardCnt,      // 1*16, u32

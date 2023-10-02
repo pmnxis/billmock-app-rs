@@ -24,11 +24,23 @@ use {defmt_rtt as _, panic_probe as _};
 
 use crate::application::Application;
 use crate::boards::*;
+use crate::components::eeprom::NovellaInitOk;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     // Initialize necessary BSP
     let board: &'static mut Board = make_static!(Board::init());
+
+    // Eeprom Novella module init
+    match board.hardware.eeprom.init(false).await {
+        Ok(NovellaInitOk::FirstBoot) => {
+            defmt::info!("Welcom first boot");
+        }
+        Err(_) => {
+            defmt::error!("Critical Error")
+        }
+        _ => {}
+    };
 
     // heuristic wait for stablize external electronic status
     Timer::after(Duration::from_millis(1000)).await;

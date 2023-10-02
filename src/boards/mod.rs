@@ -18,6 +18,8 @@ use self::billmock_0v4::hardware_init_0v4;
 #[cfg(feature = "hw_mini_0v4")]
 use self::billmock_mini_0v4::hardware_init_mini_0v4;
 use crate::components::dip_switch::DipSwitch;
+use crate::components::eeprom::novella_spawn;
+use crate::components::eeprom::Novella;
 use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::{self, card_reader_device_spawn, CardReaderDevice};
 use crate::components::vend_side_bill::VendSideBill;
@@ -65,6 +67,9 @@ pub struct Hardware {
 
     /// Card reader for serial arcade payement
     pub card_reader: CardReaderDevice,
+
+    /// Eeprom manager, powered by Novella
+    pub eeprom: Novella,
 }
 
 impl Hardware {
@@ -171,6 +176,8 @@ impl Hardware {
         // USART CardReaderDevice module initialization
         unwrap!(spawner.spawn(card_reader_device_spawn(&self.card_reader)));
         serial_device::alert_module_status();
+
+        unwrap!(spawner.spawn(novella_spawn(&self.eeprom)));
     }
 }
 
