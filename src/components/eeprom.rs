@@ -31,40 +31,41 @@ pub struct FaultLog {
 assert_eq_size!(FaultLog, [u8; 6]);
 
 // Memory Map - Assume 2KB (16KBits) EEPROM.
-// +----------- 2Kbyte EEPROM (Lower) -----------+-------------- 2Kbyte EEPROM (Higher) --------------+
-// |                                                                                                  |
-// |   Section 0 (0x00-0xFF bytes)   p1_card_cnt    Section 4 (0x400-0x47F bytes) hw_boot_cnt         |
-// |   +-----------------------------------------+  +-----------------------------------------+       |
-// |   | Page 0  | last_time | p1_card_cnt | CRC |  | Page 0  | last_time | hw_boot_cnt | CRC |       |
-// |   | Page 1  | last_time | p1_card_cnt | CRC |  | ...     | ...       | ...         | ... |       |
-// |   | ...     | ...       | ...         | ... |  | Page 7  | last_time | hw_boot_cnt | CRC |       |
-// |   | Page 15 | last_time | p1_card_cnt | CRC |  +-----------------------------------------+       |
-// |   +-----------------------------------------+                                                    |
-// |                                                                                                  |
-// |   Section 1 (0x100-0x1FF bytes) p2_card_cnt    Section 5 (0x47F-0x4FF bytes) terminal_id[0..6]   |
-// |   +-----------------------------------------+  +-----------------------------------------------+ |
-// |   | Page 0  | last_time | p2_card_cnt | CRC |  | Page 0  | last_time | terminal_id[0..6] | CRC | |
-// |   | Page 1  | last_time | p2_card_cnt | CRC |  | ...     | ...       | ...               | ... | |
-// |   | ...     | ...       | ...         | ... |  | Page 7  | last_time | terminal_id[0..6] | CRC | |
-// |   | Page 15 | last_time | p2_card_cnt | CRC |  +-----------------------------------------------+ |
-// |   +-----------------------------------------+                                                    |
-// |                                                Section 0..=3 (big sections, 16 page-ish data)    |
-// |   Section 2 (0x200-0x2FF bytes) p1_coin_cnt    Section  0 : p1_card_cnt    u32     4 bytes       |
-// |   +-----------------------------------------+  Section  1 : p1_card_cnt    u32     4 bytes       |
-// |   | Page 0  | last_time | p1_coin_cnt | CRC |  Section  2 : p1_coin_cnt    u32     4 bytes       |
-// |   | Page 1  | last_time | p1_coin_cnt | CRC |  Section  3 : p2_coin_cnt    u32     4 bytes       |
-// |   | ...     | ...       | ...         | ... |                                                    |
-// |   | Page 15 | last_time | p1_coin_cnt | CRC |  Section 4..=11 (small sections, 8 page-ish data)  |
-// |   +-----------------------------------------+  Section  4 : hw_boot_cnt    u32     4 bytes       |
-// |                                                Section  5 : terminal_id[0..=5]     6 bytes       |
-// |   Section 3 (0x300-0x3FF bytes) p2_coin_cnt    Section  6 : terminal_id[6..=9]     4 bytes       |
-// |   +-----------------------------------------+  Section  7 : terminal_id_ext[0..=2] 3 bytes       |
-// |   | Page 0  | last_time | p2_coin_cnt | CRC |  Section  8 : card_port1_backup      6 bytes       |
-// |   | Page 1  | last_time | p2_coin_cnt | CRC |  Section  9 : card_port2_backup      6 bytes       |
-// |   | ...     | ...       | ...         | ... |  Section 10 : card_port3_backup      6 bytes       |
-// |   | Page 15 | last_time | p2_coin_cnt | CRC |  Section 11 : card_port4_backup      6 bytes       |
-// |   +-----------------------------------------+                                                    |
-// +--------------------------------------------------------------------------------------------------+
+// +---------------------------- Memory Map - Assume 2KB (16KBits) EEPROM ---------------------------+
+// |                                                                                                 |
+// |  Section 0 (0x00-0xFF bytes)   p1_card_cnt    Section =7 (0x600-0x77F bytes) card_reader...     |
+// |  +-----------------------------------------+  +-----------------------------------------+       |
+// |  | Slot 0  | last_time | p1_card_cnt | CRC |  | Page 0  | last_time | lsb               | page0 |
+// |  | Slot 1  | last_time | p1_card_cnt | CRC |  |    card_reader_port_backup (32 bytes)   | page1 |
+// |  | ...     | ...       | ...         | ... |  |                       msb         | CRC | page2 |
+// |  | Slot 15 | last_time | p1_card_cnt | CRC |  +--...------------------------------------+       |
+// |  +-----------------------------------------+  | Page 0  | last_time | lsb               | page0 |
+// |                                               |    card_reader_port_backup (32 bytes)   | page1 |
+// |  Section 1 (0x100-0x1FF bytes) p2_card_cnt    |                               msb | CRC | page2 |
+// |  +-----------------------------------------+  +-----------------------------------------+       |
+// |  | Slot 0  | last_time | p2_card_cnt | CRC | <- This section's slot size is single page         |
+// |  | Slot 1  | last_time | p2_card_cnt | CRC |                                                    |
+// |  | ...     | ...       | ...         | ... |  Section 0..=3 (normal sections, 16 slot-ish data) |
+// |  | Slot 15 | last_time | p2_card_cnt | CRC |  Section  0 : p1_card_cnt          u32    4 bytes  |
+// |  +-----------------------------------------+  Section  1 : p1_card_cnt          u32    4 bytes  |
+// |   . . . . .                                   Section  2 : p1_coin_cnt          u32    4 bytes  |
+// |                                               Section  3 : p2_coin_cnt          u32    4 bytes  |
+// |  Section 5 (0x480-0x4FF bytes) hw_boot_cnt                                                      |
+// |  +-----------------------------------------+  Section 4..=5 (small sections, 8 slot-ish data)   |
+// |  | Slot 0  | last_time | hw_boot_cnt | CRC |  Section  4 : hw_boot_cnt          u32    4 bytes  |
+// |  | ...     | ...       | ...         | ... |  Section  5 : fault_log         Struct    6 bytes  |
+// |  | Slot 7  | last_time | hw_boot_cnt | CRC |                                                    |
+// |  +-----------------------------------------+                             2/3 page for slot      |
+// |                                               Section 6..=7 (big sections, 8 slot-ish data      |
+// |  Section 6 (0x500-0x5FF bytes) raw_terminal   Section  5 : raw_terminal      Struct   13 bytes  |
+// |  +-----------------------------------------+                           2 pages for single slot  |
+// |  | Slot 0  | last_time | lsb  raw_terminal |                                                    |
+// |  |         raw_terminal          msb | CRC |  Section  6 : card_reader_port_backup    32 bytes  |
+// |  +--...------------------------------------+                           3 pages for single slot  |
+// |  | Slot 7  | last_time | lsb  raw_terminal | page0                                              |
+// |  |         raw_terminal          msb | CRC | page1                                              |
+// |  +-----------------------------------------+                                                    |
+// +-------------------------------------------------------------------------------------------------+
 //
 //   Write cycle endurance of each page is 1,200,000 ~ 4,000,0000
 //   Single Page Structure, M24C16's single page size is 16 bytes.
@@ -107,7 +108,7 @@ pub struct MemStorage {
 
 /// Tiny control block for manage single section, it include what page is latest and is dirty state
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
-/// |  b7 |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
+/// | b7 |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
 /// |dirty|  robin: number of what page is latest   |
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
