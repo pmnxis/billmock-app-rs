@@ -12,7 +12,6 @@ use embassy_stm32::crc::{Config as CrcConfig, Crc, InputReverseConfig};
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
 use embassy_stm32::i2c::I2c;
-use embassy_stm32::pac::crc::vals::Polysize;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::{Config as UsartConfig, Uart};
 use embassy_stm32::{bind_interrupts, peripherals};
@@ -79,7 +78,7 @@ pub fn hardware_init_mini_0v4(
     );
 
     // InputReverseConfig::Halfword
-    let Ok(crc_config) = CrcConfig::new(InputReverseConfig::None, false, 0xA097) else {
+    let Ok(crc_config) = CrcConfig::new(InputReverseConfig::Word, false, 0xA097) else {
         panic!("Something went horribly wrong")
     };
 

@@ -24,7 +24,6 @@ use {defmt_rtt as _, panic_probe as _};
 
 use crate::application::Application;
 use crate::boards::*;
-use crate::components::eeprom::NovellaInitOk;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -47,9 +46,6 @@ async fn main(spawner: Spawner) {
         }
         Ok(crate::components::eeprom::NovellaInitOk::Success(_)) => {
             defmt::info!("Eeprom is good status");
-        }
-        _ => {
-            defmt::info!("mmmH?");
         }
     };
 
