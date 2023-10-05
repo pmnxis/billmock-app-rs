@@ -12,6 +12,7 @@ use embassy_stm32::crc::{Config as CrcConfig, Crc, InputReverseConfig};
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
 use embassy_stm32::i2c::I2c;
+use embassy_stm32::pac::crc::vals::Polysize;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::{Config as UsartConfig, Uart};
 use embassy_stm32::{bind_interrupts, peripherals};
@@ -45,7 +46,7 @@ pub fn hardware_init_mini_0v4(
     let usart2_rx_buf = unsafe { &mut USART2_RX_BUF };
 
     let usart2_config = {
-        let mut ret = UsartConfig::default();
+        let mut ret: UsartConfig = UsartConfig::default();
         ret.baudrate = 115200;
         ret.assume_noise_free = false;
         ret
@@ -61,26 +62,28 @@ pub fn hardware_init_mini_0v4(
             p.DMA1_CH1,
             usart2_config,
         )
+        .unwrap()
         .split();
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
 
-    let mut i2c = I2c::new(
+    let i2c = I2c::new(
         p.I2C1,
         p.PB8,
         p.PB9,
         Irqs,
         p.DMA1_CH4,
         p.DMA1_CH3,
-        Hertz(100_000),
+        Hertz(400_000),
         Default::default(),
     );
 
-    let Ok(crc_config) = CrcConfig::new(InputReverseConfig::Halfword, false, 0x1234) else {
+    // InputReverseConfig::Halfword
+    let Ok(crc_config) = CrcConfig::new(InputReverseConfig::None, false, 0xA097) else {
         panic!("Something went horribly wrong")
     };
 
-    let mut crc = Crc::new(p.CRC, crc_config);
+    let crc = Crc::new(p.CRC, crc_config);
 
     let async_input_event_ch = &shared_resource.async_input_event_ch.channel;
 
@@ -164,6 +167,10 @@ pub fn hardware_init_mini_0v4(
             Input::new(p.PB12.degrade(), Pull::Up), // DIPSW5
         ),
         card_reader: CardReaderDevice::new(usart2_tx, usart2_rx),
-        eeprom: Novella::const_new(i2c, crc),
+        eeprom: Novella::const_new(
+            i2c,
+            crc,
+            embassy_stm32::gpio::OutputOpenDrain::new(p.PF0, Level::Low, Speed::Low, Pull::None),
+        ),
     }
 }

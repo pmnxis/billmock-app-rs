@@ -11,6 +11,7 @@ use core::mem::MaybeUninit;
 
 use _core::borrow::BorrowMut;
 use embassy_stm32::crc::{Config as HwCrcConfig, Crc};
+use embassy_stm32::gpio::OutputOpenDrain; // this can be replaced to Output
 use embassy_stm32::i2c::I2c;
 use embassy_stm32::peripherals::{self};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
@@ -117,21 +118,23 @@ pub struct NovellaSectionControlBlock {
 }
 
 pub type RawNvRobin = u8;
+pub type RawRomAddress = u16;
 pub type EepromAddress = u8;
+pub type DevSelAddress = u8;
 type Checksum = u16;
 
 #[repr(u8)]
 #[derive(Clone, Copy)]
 #[allow(unused)]
 pub enum NvMemSectionKind {
-    P1CardCnt,      // 1*16, u32
-    P2CardCnt,      // 1*16, u32
-    P1CoinCnt,      // 1*16, u32
-    P2CoinCnt,      // 1*16, u32
-    FaultLog,       // 1*16, Not determined 6 bytes
-    HwBootCount,    // 1*08, u32
-    TerminalId,     // 2*08, 13 bytes
-    CardPortBackup, // 3*08, 32 bytes (4+4)*4
+    P1CardCnt = 0,      // 1*16, u32
+    P2CardCnt = 1,      // 1*16, u32
+    P1CoinCnt = 2,      // 1*16, u32
+    P2CoinCnt = 3,      // 1*16, u32
+    FaultLog = 4,       // 1*16, Not determined 6 bytes
+    HwBootCount = 5,    // 1*08, u32
+    TerminalId = 6,     // 2*08, 13 bytes
+    CardPortBackup = 7, // 3*08, 32 bytes (4+4)*4
 }
 
 impl From<u8> for NvMemSectionKind {
@@ -139,7 +142,12 @@ impl From<u8> for NvMemSectionKind {
     fn from(value: u8) -> Self {
         unsafe {
             // Future rust will support `core::mem::variant_count::<Self>() as u8`
-            assert!(value >= SECTION_NUM as u8);
+            if value >= SECTION_NUM as u8 {
+                assert!(
+                    value >= SECTION_NUM as u8,
+                    "value should be less then SECTION_NUMBER"
+                );
+            }
             core::mem::transmute(value)
         }
     }
@@ -217,6 +225,8 @@ impl NovellaRw for NovellaSelector<u32> {
                 should_not_happen();
             }
         };
+
+        cb.control_mut(self.section).set_dirty();
     }
 }
 
@@ -358,7 +368,7 @@ impl NovellaSectionControlBlock {
             None
         } else {
             let ret = (section_info.slot_size - 1) & (self.inner + 1);
-            self.inner = ret;
+            self.inner = ret | (1 << 7);
             self.set_dirty();
             Some(ret)
         }
@@ -368,7 +378,7 @@ impl NovellaSectionControlBlock {
 // this should be store as const type
 #[repr(C)]
 struct NvSectionInfo {
-    sect_start_page: u8, // sometimes it's u16, real_offset / 128 (r>>7)
+    sect_start_page: u16, // sometimes it's u16, real_offset / 128 (r>>7)
     slot_num: u8,
     slot_size: u8,
     real_data_size: u8,
@@ -376,38 +386,38 @@ struct NvSectionInfo {
 
 #[rustfmt::skip]
 const SECTION_TABLE: [NvSectionInfo; 8] = [
-    NvSectionInfo{sect_start_page :  0, slot_num : 16, slot_size : 1, real_data_size :  4 },
-    NvSectionInfo{sect_start_page : 16, slot_num : 16, slot_size : 1, real_data_size :  4 },
-    NvSectionInfo{sect_start_page : 32, slot_num : 16, slot_size : 1, real_data_size :  4 },
-    NvSectionInfo{sect_start_page : 48, slot_num : 16, slot_size : 1, real_data_size :  4 },
-    NvSectionInfo{sect_start_page : 64, slot_num :  8, slot_size : 1, real_data_size :  6 },
-    NvSectionInfo{sect_start_page : 72, slot_num :  8, slot_size : 1, real_data_size :  4 },
-    NvSectionInfo{sect_start_page : 80, slot_num :  8, slot_size : 2, real_data_size : 13 },
-    NvSectionInfo{sect_start_page : 96, slot_num :  8, slot_size : 3, real_data_size : 32 },
+    NvSectionInfo{sect_start_page :    0, slot_num : 16, slot_size : 1, real_data_size :  4 },
+    NvSectionInfo{sect_start_page :  256, slot_num : 16, slot_size : 1, real_data_size :  4 },
+    NvSectionInfo{sect_start_page :  512, slot_num : 16, slot_size : 1, real_data_size :  4 },
+    NvSectionInfo{sect_start_page :  768, slot_num : 16, slot_size : 1, real_data_size :  4 },
+    NvSectionInfo{sect_start_page : 1024, slot_num :  8, slot_size : 1, real_data_size :  6 },
+    NvSectionInfo{sect_start_page : 1152, slot_num :  8, slot_size : 1, real_data_size :  4 },
+    NvSectionInfo{sect_start_page : 1280, slot_num :  8, slot_size : 2, real_data_size : 13 },
+    NvSectionInfo{sect_start_page : 1536, slot_num :  8, slot_size : 3, real_data_size : 32 },
 ];
 
 const PAGE_SIZE: usize = 16;
 const SECTION_NUM: usize = 8;
-const ROM_R_ADDRESS: u8 = 0b1010_0001;
-const ROM_W_ADDRESS: u8 = 0b1010_0000;
-// const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
+const ROM_7B_ADDRESS: u8 = 0b1010000; // Embassy require 7bits address as parameter.
+                                      // const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
 const WAIT_DURATION_PER_PAGE: Duration = Duration::from_millis(5); // heuristic value
 const CHECKSUM_SIZE: usize = core::mem::size_of::<Checksum>();
 const TIMESTAMP_SIZE: usize = core::mem::size_of::<Instant>();
 const TOTAL_SLOT_NUM: usize = 96; // should be calculated in compile time
 const TOTAL_SLOT_ARR_LEN: usize =
-    (TOTAL_SLOT_NUM + core::mem::size_of::<u8>() - 1) / core::mem::size_of::<u8>();
+    (TOTAL_SLOT_NUM + core::mem::size_of::<u8>() - 1) / (core::mem::size_of::<u8>() * 8);
 
 // static EEPROM_WAIT_DEADLINE: Instant =
 //     unsafe { MaybeUninit::uninit().assume_init() };
 static EEPROM_WAIT_DEADLINE: u64 = 0;
 
 fn novella_i2c_polling_check_timeout() -> Result<(), embassy_stm32::i2c::Error> {
-    if Instant::now() < Instant::from_ticks(EEPROM_WAIT_DEADLINE) {
-        Ok(())
-    } else {
-        Err(embassy_stm32::i2c::Error::Timeout)
-    }
+    Ok(())
+    // if Instant::now() < Instant::from_ticks(EEPROM_WAIT_DEADLINE) {
+    //     Ok(())
+    // } else {
+    //     Err(embassy_stm32::i2c::Error::Timeout)
+    // }
 }
 
 fn novella_i2c_polling_set_timeout(duration: Duration) {
@@ -478,6 +488,7 @@ impl NovellaModuleControlBlock {
     }
 }
 
+#[derive(Debug)]
 pub enum NovellaInitOk {
     /// Success for all slots
     Success(Instant),
@@ -487,6 +498,7 @@ pub enum NovellaInitOk {
     FirstBoot,
 }
 
+#[derive(Debug)]
 pub enum NovellaInitError {
     FirstBoot,
     MissingEeprom,
@@ -509,6 +521,7 @@ pub enum NovellaWriteError {
 
 pub struct Novella {
     bus: UnsafeCell<I2c<'static, peripherals::I2C1, peripherals::DMA1_CH4, peripherals::DMA1_CH3>>,
+    nwp: UnsafeCell<OutputOpenDrain<'static, peripherals::PF0>>,
     crc: UnsafeCell<Crc<'static>>, // crc will be mutexed for reuse HwConfig
     buffer: UnsafeCell<[u8; PAGE_SIZE + core::mem::size_of::<EepromAddress>()]>,
     mem_storage: Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>,
@@ -520,11 +533,13 @@ impl Novella {
     pub const fn const_new(
         i2c: I2c<'static, peripherals::I2C1, peripherals::DMA1_CH4, peripherals::DMA1_CH3>,
         crc: Crc<'static>,
+        nwp: OutputOpenDrain<'static, peripherals::PF0>,
     ) -> Self {
         Self {
             bus: UnsafeCell::new(i2c),
             crc: UnsafeCell::new(crc),
-            buffer: UnsafeCell::new(unsafe { MaybeUninit::uninit().assume_init() }),
+            nwp: UnsafeCell::new(nwp),
+            buffer: UnsafeCell::new([0u8; PAGE_SIZE + core::mem::size_of::<EepromAddress>()]),
             mem_storage: Mutex::new(NovellaModuleControlBlock::const_default()),
         }
     }
@@ -550,7 +565,17 @@ impl Novella {
 
     #[inline]
     fn consider_tailing_checksum(slot_size: u8, page_idx: u8) -> bool {
-        slot_size == page_idx - 1
+        slot_size == (page_idx + 1)
+    }
+
+    fn set_write_protect(&self) {
+        let nwp = unsafe { &mut *self.nwp.get() };
+        nwp.set_high();
+    }
+
+    fn clr_write_protect(&self) {
+        let nwp = unsafe { &mut *self.nwp.get() };
+        nwp.set_low();
     }
 
     /// data is stored in MemStorage's correspond member variable.
@@ -563,17 +588,19 @@ impl Novella {
         let crc = unsafe { &mut *self.crc.get() };
         let rx_buffer: &mut [u8] = unsafe {
             let buffer = &mut *self.buffer.get();
-            &mut buffer[core::mem::size_of::<EepromAddress>()..]
+            // &mut buffer[core::mem::size_of::<EepromAddress>()..]
+            // best is using upper code, but care `align` for 32bit processor
+            &mut buffer[..PAGE_SIZE]
         };
+
+        // defmt::debug!("raw_slot_read : {}, {}", kind as u8, slot_idx);
+
+        crc.reset();
 
         let sect_idx: usize = kind as u8 as usize;
         let slot_size = SECTION_TABLE[sect_idx].slot_size;
 
-        assert!(slot_size <= slot_idx); // should not happens
-
-        let data_address: EepromAddress =
-            SECTION_TABLE[sect_idx].sect_start_page + SECTION_TABLE[sect_idx].slot_size * slot_idx;
-        let data_address_slice = data_address.to_be_bytes();
+        assert!(SECTION_TABLE[sect_idx].slot_num > slot_idx); // should not happens
 
         let mut cb = self.mem_storage.lock().await;
         // <- MUTEX SECTION START FROM HERE ->
@@ -585,18 +612,29 @@ impl Novella {
         let mut checksum_expected: u16 = 0;
 
         for page_idx in 0..slot_size {
-            novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
-            bus.write_read_timeout(
-                ROM_R_ADDRESS,
-                &data_address_slice,
-                rx_buffer,
-                novella_i2c_polling_check_timeout,
-            )
-            .await
-            .map_err(|e| match e {
-                embassy_stm32::i2c::Error::Timeout => NovellaReadError::MissingEeprom,
-                _ => NovellaReadError::Unknown,
-            })?;
+            // #[cfg(i2c_addr_bits_include_msb)]
+            let raw_addr = SECTION_TABLE[sect_idx].sect_start_page
+                + (slot_size as RawRomAddress * slot_idx as RawRomAddress
+                    + page_idx as RawRomAddress)
+                    * PAGE_SIZE as RawRomAddress;
+
+            let data_address_slice = (raw_addr as EepromAddress).to_be_bytes();
+            let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
+
+            // novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
+            // bus.write_read_timeout(
+            let result = bus
+                .blocking_write_read_timeout(
+                    i2c_address,
+                    &data_address_slice,
+                    rx_buffer,
+                    novella_i2c_polling_check_timeout,
+                )
+                // .await
+                .map_err(|e| match e {
+                    embassy_stm32::i2c::Error::Timeout => NovellaReadError::MissingEeprom,
+                    _ => NovellaReadError::Unknown,
+                })?;
 
             if Self::consider_initial_timestamp(page_idx) {
                 // Grab time::Instant of slot
@@ -604,6 +642,8 @@ impl Novella {
                     slot_timestamp =
                         (rx_buffer[0..TIMESTAMP_SIZE].as_ptr() as *const Instant).read();
                 }
+
+                checksum_expected = crc.feed_bytes(&rx_buffer[0..TIMESTAMP_SIZE]) as Checksum;
             }
 
             // copy [slot_real_data_reads..MAX(..)]
@@ -611,7 +651,8 @@ impl Novella {
             let max_real_data_in_page: usize = PAGE_SIZE
                 - start_read
                 - (Self::consider_tailing_checksum(slot_size, page_idx) as usize * CHECKSUM_SIZE);
-            assert!((max_real_data_in_page > PAGE_SIZE)); // need compile time assertion
+
+            assert!((max_real_data_in_page <= PAGE_SIZE)); // need compile time assertion
 
             let size_can_read = max_real_data_in_page.min(real_data_left as usize);
 
@@ -622,8 +663,10 @@ impl Novella {
                 // instead of `*(dst++) = *(src++)`
                 slot_mem[slot_mem_start + i] = src[i];
                 // Crc Trait return u32 only, thus type casting to Checksum
-                checksum_expected = crc.feed_byte(src[i]) as Checksum;
+                // defmt::println!("{:02x}", src[i]);
+                // checksum_expected = crc.feed_byte(src[i]) as Checksum;
             }
+            checksum_expected = crc.feed_bytes(src) as Checksum;
 
             real_data_left -= size_can_read;
         }
@@ -657,7 +700,7 @@ impl Novella {
         let sect_idx: usize = kind as u8 as usize;
         let slot_size = SECTION_TABLE[sect_idx].slot_size;
 
-        assert!(slot_size <= slot_idx); // should not happens
+        assert!(SECTION_TABLE[sect_idx].slot_num > slot_idx); // should not happens
 
         let mut cb = self.mem_storage.lock().await;
         // <- MUTEX SECTION START FROM HERE ->
@@ -670,26 +713,43 @@ impl Novella {
 
         // Write Oeration
         for page_idx in 0..slot_size {
+            data_buffer.fill(0xFF);
+
             // Set eeprom data address
-            addr_buffer.copy_from_slice(
-                &(SECTION_TABLE[sect_idx].sect_start_page
-                    + SECTION_TABLE[sect_idx].slot_size * slot_idx
-                    + page_idx * PAGE_SIZE as EepromAddress)
-                    .to_be_bytes(),
-            );
+            // #[cfg(i2c_addr_bits_include_msb)]
+
+            let raw_addr = SECTION_TABLE[sect_idx].sect_start_page
+                + (slot_size as RawRomAddress * slot_idx as RawRomAddress
+                    + page_idx as RawRomAddress)
+                    * PAGE_SIZE as RawRomAddress;
+
+            addr_buffer.copy_from_slice(&((raw_addr & 0xFF) as u8).to_be_bytes());
+            // addr_buffer.copy_from_slice(
+            //     &(SECTION_TABLE[sect_idx].sect_start_page
+            //         + SECTION_TABLE[sect_idx].slot_size * slot_idx
+            //         + page_idx * PAGE_SIZE as EepromAddress)
+            //         .to_be_bytes(),
+            // );
 
             if Self::consider_initial_timestamp(page_idx) {
                 // Grab time::Instant of slot
                 unsafe {
                     // copy for first slice
-                    *(data_buffer[0..TIMESTAMP_SIZE].as_mut_ptr() as *mut Instant) = timestamp;
+                    // To avoid mem align issue, just copy 1 by 1.
+                    data_buffer[0..TIMESTAMP_SIZE].copy_from_slice(core::slice::from_raw_parts(
+                        &timestamp as *const _ as *const u8,
+                        core::mem::size_of_val(&timestamp),
+                    ));
 
                     let words: &[u32] = core::slice::from_raw_parts(
                         (&timestamp as *const _) as *const u32,
                         core::mem::size_of::<Instant>() / core::mem::size_of::<u32>(),
                     );
 
-                    checksum_expected = crc.feed_words(&words) as Checksum;
+                    // checksum_expected = crc.feed_words(&words) as Checksum;
+                    defmt::error!("w_ttt {=[u8]:#X}", &data_buffer[0..TIMESTAMP_SIZE]);
+
+                    checksum_expected = crc.feed_bytes(&data_buffer[0..TIMESTAMP_SIZE]) as Checksum;
                 }
             }
 
@@ -698,62 +758,101 @@ impl Novella {
                 - start_write
                 - (Self::consider_tailing_checksum(slot_size, page_idx) as usize * CHECKSUM_SIZE);
 
-            assert!((max_real_data_in_page > PAGE_SIZE)); // need compile time assertion
+            // assert!((max_real_data_in_page > PAGE_SIZE)); // need compile time assertion
 
             let size_can_write = max_real_data_in_page.min(real_data_left as usize);
 
             let slot_mem_start = SECTION_TABLE[sect_idx].real_data_size as usize - real_data_left;
             let dst = &mut data_buffer[start_write..start_write + size_can_write];
+            let src = &slot_mem[slot_mem_start..slot_mem_start + size_can_write];
 
-            for i in 0..size_can_write {
-                // instead of `*(dst++) = *(src++)`
-                dst[i] = slot_mem[slot_mem_start + i];
-                // Crc Trait return u32 only, thus type casting to Checksum
-                checksum_expected = crc.feed_byte(dst[i]) as Checksum;
-            }
+            dst.copy_from_slice(src);
+            defmt::error!("w_src {=[u8]:#X}", src);
+            checksum_expected = crc.feed_bytes(src) as Checksum;
+
+            // for i in 0..size_can_write {
+            //     // instead of `*(dst++) = *(src++)`
+            //     dst[i] = slot_mem[slot_mem_start + i];
+            //     // Crc Trait return u32 only, thus type casting to Checksum
+            // }
 
             if Self::consider_tailing_checksum(slot_size, page_idx) {
                 unsafe {
-                    *(data_buffer[PAGE_SIZE - CHECKSUM_SIZE..PAGE_SIZE].as_mut_ptr()
-                        as *mut Checksum) = checksum_expected;
+                    // To avoid mem align issue, just copy 1 by 1.
+                    data_buffer[PAGE_SIZE - CHECKSUM_SIZE..PAGE_SIZE].copy_from_slice(
+                        core::slice::from_raw_parts(
+                            &checksum_expected as *const _ as *const u8,
+                            core::mem::size_of_val(&checksum_expected),
+                        ),
+                    );
                 }
             }
 
-            novella_i2c_polling_set_default_timeout();
+            // #[cfg(i2c_addr_bits_include_msb)]
+            let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            bus.write_timeout(
-                ROM_W_ADDRESS,
-                unsafe { &*self.buffer.get() }, // when page is 16, include 1+16 byte will be tx.
-                novella_i2c_polling_check_timeout,
-            )
-            .await;
+            self.clr_write_protect();
+
+            novella_i2c_polling_set_default_timeout();
+            let result = bus
+                .write_timeout(
+                    i2c_address,
+                    unsafe { &*self.buffer.get() }, // when page is 16, include 1+16 byte will be tx.
+                    novella_i2c_polling_check_timeout,
+                )
+                .await;
+            if let Err(e) = result {
+                defmt::error!("raw_slot_write_error : {:?}", e);
+            }
+
+            real_data_left -= size_can_write;
+
+            self.set_write_protect();
+            Timer::after(Duration::from_millis(5)).await;
         }
 
         // Read for check, do not copy value to MemStorage
         let mut checksum_double_expected: Checksum = 0;
+
+        // change buffer address for align issue
+        let mut addr_buffer = unsafe { &mut (&mut *self.buffer.get())[PAGE_SIZE..] };
+        let mut data_buffer = unsafe { &mut (&mut *self.buffer.get())[..PAGE_SIZE] };
+        let mut real_data_left = SECTION_TABLE[sect_idx].real_data_size as usize;
         crc.reset();
 
         for page_idx in 0..slot_size {
             // Set eeprom data address
-            addr_buffer.copy_from_slice(
-                &(SECTION_TABLE[sect_idx].sect_start_page
-                    + SECTION_TABLE[sect_idx].slot_size * slot_idx
-                    + page_idx * PAGE_SIZE as EepromAddress)
-                    .to_be_bytes(),
-            );
+            // #[cfg(i2c_addr_bits_include_msb)]
+
+            let raw_addr = SECTION_TABLE[sect_idx].sect_start_page
+                + (slot_size as RawRomAddress * slot_idx as RawRomAddress
+                    + page_idx as RawRomAddress)
+                    * PAGE_SIZE as RawRomAddress;
+
+            addr_buffer.copy_from_slice(&((raw_addr & 0xFF) as u8).to_be_bytes());
+            // addr_buffer.copy_from_slice(
+            //     &(SECTION_TABLE[sect_idx].sect_start_page
+            //         + SECTION_TABLE[sect_idx].slot_size * slot_idx
+            //         + page_idx * PAGE_SIZE as EepromAddress)
+            //         .to_be_bytes(),
+            // );
+
+            // #[cfg(i2c_addr_bits_include_msb)]
+            let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
             novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
-            bus.write_read_timeout(
-                ROM_R_ADDRESS,
-                &addr_buffer,
-                data_buffer,
-                novella_i2c_polling_check_timeout,
-            )
-            .await
-            .map_err(|e| match e {
-                embassy_stm32::i2c::Error::Timeout => NovellaWriteError::MissingEeprom,
-                _ => NovellaWriteError::Unknown,
-            })?;
+            let result = bus
+                .write_read_timeout(
+                    i2c_address,
+                    addr_buffer,
+                    data_buffer,
+                    novella_i2c_polling_check_timeout,
+                )
+                .await
+                .map_err(|e| match e {
+                    embassy_stm32::i2c::Error::Timeout => NovellaWriteError::MissingEeprom,
+                    _ => NovellaWriteError::Unknown,
+                })?;
 
             if Self::consider_initial_timestamp(page_idx) {
                 // Grab time::Instant of slot
@@ -770,11 +869,13 @@ impl Novella {
                     )
                 };
 
-                if timestamp_given == timestamp_words {
+                if *timestamp_given != *timestamp_words {
                     return Err(NovellaWriteError::Wearout);
-                } else {
-                    checksum_double_expected = crc.feed_words(timestamp_words) as Checksum;
                 }
+                defmt::error!("r_ttt {=[u8]:#X}", &data_buffer[0..TIMESTAMP_SIZE]);
+
+                checksum_double_expected =
+                    crc.feed_bytes(&data_buffer[0..TIMESTAMP_SIZE]) as Checksum;
             }
 
             // copy [slot_real_data_reads..MAX(..)]
@@ -782,17 +883,16 @@ impl Novella {
             let max_real_data_in_page: usize = PAGE_SIZE
                 - start_read
                 - (Self::consider_tailing_checksum(slot_size, page_idx) as usize * CHECKSUM_SIZE);
-            assert!((max_real_data_in_page > PAGE_SIZE)); // need compile time assertion
+
+            assert!((max_real_data_in_page <= PAGE_SIZE)); // need compile time assertion
 
             let size_can_read = max_real_data_in_page.min(real_data_left as usize);
 
             let slot_mem_start = SECTION_TABLE[sect_idx].real_data_size as usize - real_data_left;
             let src = &data_buffer[start_read..start_read + size_can_read];
 
-            for i in 0..size_can_read {
-                // Crc Trait return u32 only, thus type casting to Checksum
-                checksum_double_expected = crc.feed_byte(src[i]) as Checksum;
-            }
+            defmt::error!("r_src {=[u8]:#X}", src);
+            checksum_double_expected = crc.feed_bytes(src) as Checksum;
 
             real_data_left -= size_can_read;
         }
@@ -802,7 +902,7 @@ impl Novella {
             (data_buffer[PAGE_SIZE - CHECKSUM_SIZE..PAGE_SIZE].as_ptr() as *const Checksum).read()
         };
 
-        if (checksum_expected == checksum_given) && (checksum_expected == checksum_double_expected)
+        if (checksum_expected != checksum_given) || (checksum_expected != checksum_double_expected)
         {
             Err(NovellaWriteError::Wearout)
         } else {
@@ -831,7 +931,10 @@ impl Novella {
         let mut broken_map_idx = 0;
         let mut broken_map = [0u8; TOTAL_SLOT_ARR_LEN];
         let mut latest = Instant::from_ticks(0); // guarantees smallest
-        let mut fault_checksum_count = 0;
+        let mut broken_detected = 0;
+
+        self.set_write_protect();
+        crc.reset();
 
         for sect_idx in 0..SECTION_TABLE.len() {
             let kind = NvMemSectionKind::from(sect_idx as u8);
@@ -851,7 +954,7 @@ impl Novella {
                     }
                     Err(NovellaReadError::FaultChecksum) | Err(NovellaReadError::Unknown) => {
                         broken_map[broken_map_idx >> 3] |= 1 << (broken_map_idx & 0x7);
-                        fault_checksum_count += 1;
+                        broken_detected += 1;
                     }
                     Err(NovellaReadError::MissingEeprom) => {
                         return Err(NovellaInitError::MissingEeprom);
@@ -861,18 +964,21 @@ impl Novella {
                 broken_map_idx += 1;
             }
 
-            let mut mem = self.mem_storage.lock().await;
-
             let final_slot = if let Some(latest_slot) = latest_slot {
                 // read again for fill latest value on MemStorage.
                 self.raw_slot_read(kind, latest_slot).await; //<- Error handling here.
                 latest_slot
             } else {
                 unsafe {
-                    mem.get_data_raw_slice(kind).fill(0x00);
+                    self.mem_storage
+                        .lock()
+                        .await
+                        .get_data_raw_slice(kind)
+                        .fill(0x00);
                 }
                 0
             };
+            let mut mem = self.mem_storage.lock().await;
             mem.controls[sect_idx].set_robin(final_slot);
             mem.controls[sect_idx].clr_dirty();
         }
@@ -881,12 +987,29 @@ impl Novella {
         // Before run second loop, need latest timestamp from whole slots in all sections,
         // and latest index in each section.
 
+        if broken_detected != 0 {
+            defmt::error!(
+                "Broken cell detected, try healing. broken : {}, broken_map : {:#b}",
+                broken_detected,
+                broken_map
+            );
+        } else {
+            defmt::info!("Good EEPROM");
+        }
+
         broken_map_idx = 0;
         for sect_idx in 0..SECTION_TABLE.len() {
             let kind = NvMemSectionKind::from(sect_idx as u8);
 
             for slot_idx in 0..SECTION_TABLE[sect_idx].slot_num {
                 if (broken_map[broken_map_idx >> 3] & (1 << (broken_map_idx & 0x7))) != 0 {
+                    defmt::debug!(
+                        "Fixing broken slot... [{}], sect = {}, slot = {}",
+                        broken_map_idx,
+                        sect_idx,
+                        slot_idx
+                    );
+
                     // found broken slot
                     let renew_timestamp = if noref_eeprom_latest {
                         Instant::now()
@@ -894,6 +1017,7 @@ impl Novella {
                         // Is this really right? need consider elapsed usage later.
                         Instant::now() + Duration::from_ticks(latest.as_ticks())
                     };
+
                     if self.raw_slot_write(kind, slot_idx, renew_timestamp).await
                         == Err(NovellaWriteError::MissingEeprom)
                     {
@@ -905,10 +1029,10 @@ impl Novella {
             }
         }
 
-        match fault_checksum_count {
+        match broken_detected {
             0 => Ok(NovellaInitOk::Success(latest)),
             TOTAL_SLOT_NUM => Ok(NovellaInitOk::FirstBoot),
-            x => Ok(NovellaInitOk::PartialSucess(latest, fault_checksum_count)),
+            x => Ok(NovellaInitOk::PartialSucess(latest, broken_detected)),
         }
     }
 

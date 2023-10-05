@@ -33,13 +33,24 @@ async fn main(spawner: Spawner) {
 
     // Eeprom Novella module init
     match board.hardware.eeprom.init(false).await {
-        Ok(NovellaInitOk::FirstBoot) => {
+        Ok(crate::components::eeprom::NovellaInitOk::FirstBoot) => {
             defmt::info!("Welcom first boot");
         }
-        Err(_) => {
-            defmt::error!("Critical Error")
+        Ok(crate::components::eeprom::NovellaInitOk::PartialSucess(x, y)) => {
+            defmt::error!("Novella Ok But : {}, {}", x, y);
         }
-        _ => {}
+        Err(crate::components::eeprom::NovellaInitError::FirstBoot) => {
+            defmt::error!("FirstBoot");
+        }
+        Err(crate::components::eeprom::NovellaInitError::MissingEeprom) => {
+            defmt::error!("MissingEeprom");
+        }
+        Ok(crate::components::eeprom::NovellaInitOk::Success(_)) => {
+            defmt::info!("Eeprom is good status");
+        }
+        _ => {
+            defmt::info!("mmmH?");
+        }
     };
 
     // heuristic wait for stablize external electronic status
