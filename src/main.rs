@@ -60,12 +60,17 @@ async fn main(spawner: Spawner) {
     let boot_cnt = eeprom.lock_read::<NovellaSelector<u32>>(boot_cnt_sel).await;
     eeprom.lock_write(boot_cnt_sel, boot_cnt + 1).await;
     let boot_cnt_after = eeprom.lock_read::<NovellaSelector<u32>>(boot_cnt_sel).await;
+    let uptime = eeprom.get_uptime().await;
+    let uptime_secs = uptime.as_secs();
 
+    defmt::info!("Boot Count : {} -> {}", boot_cnt, boot_cnt_after,);
     defmt::info!(
-        "Boot Count : {} -> {}, Up Time : {}",
-        boot_cnt,
-        boot_cnt_after,
-        eeprom.get_uptime().await,
+        "Total Uptime : {} ticks  <->  {} days  {} hrs  {} mins  {} secs",
+        uptime,
+        uptime_secs / (3600 * 24),
+        (uptime_secs / 3600) % 24,
+        (uptime_secs / 60) % 60,
+        uptime_secs % 60
     );
 
     // heuristic wait for stablize external electronic status
