@@ -24,14 +24,16 @@ use {defmt_rtt as _, panic_probe as _};
 
 use crate::application::Application;
 use crate::boards::*;
+use crate::components::eeprom::{NovellaSelector, NvMemSectionKind};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     // Initialize necessary BSP
     let board: &'static mut Board = make_static!(Board::init());
+    let eeprom = &board.hardware.eeprom;
 
     // Eeprom Novella module init
-    match board.hardware.eeprom.init(false).await {
+    match eeprom.init(false).await {
         Ok(crate::components::eeprom::NovellaInitOk::FirstBoot) => {
             defmt::info!("Welcom first boot");
         }
@@ -48,6 +50,23 @@ async fn main(spawner: Spawner) {
             defmt::info!("Eeprom is good status");
         }
     };
+
+    // NovellaSelector<u32> { section: NvMemSectionKind::HwBootCount},
+
+    let boot_cnt_sel: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::HwBootCount,
+        marker: core::marker::PhantomData,
+    };
+    let boot_cnt = eeprom.lock_read::<NovellaSelector<u32>>(boot_cnt_sel).await;
+    eeprom.lock_write(boot_cnt_sel, boot_cnt + 1).await;
+    let boot_cnt_after = eeprom.lock_read::<NovellaSelector<u32>>(boot_cnt_sel).await;
+
+    defmt::info!(
+        "Boot Count : {} -> {}, Up Time : {}",
+        boot_cnt,
+        boot_cnt_after,
+        eeprom.get_uptime().await,
+    );
 
     // heuristic wait for stablize external electronic status
     Timer::after(Duration::from_millis(1000)).await;

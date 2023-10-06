@@ -17,31 +17,24 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_time::{Duration, Instant, Timer};
 use serial_arcade_pay::backup_types::*;
-use static_assertions::*;
 
-#[repr(packed(2))]
-#[derive(Clone)]
-pub struct FaultLog {
-    current_boot_cnt: u32,
-    error_code: u16,
-}
-assert_eq_size!(FaultLog, [u8; 6]);
+use crate::types::fault_log::FaultLog;
 
 // Memory Map - Assume 2KB (16KBits) EEPROM.
 // +---------------------------- Memory Map - Assume 2KB (16KBits) EEPROM ---------------------------+
 // |                                                                                                 |
 // |  Section 0 (0x00-0xFF bytes)   p1_card_cnt    Section =7 (0x600-0x77F bytes) card_reader...     |
 // |  +-----------------------------------------+  +-----------------------------------------+       |
-// |  | Slot 0  | last_time | p1_card_cnt | CRC |  | Page 0  | last_time | lsb               | page0 |
-// |  | Slot 1  | last_time | p1_card_cnt | CRC |  |    card_reader_port_backup (32 bytes)   | page1 |
+// |  | Slot 0  | uptime    | p1_card_cnt | CRC |  | Page 0  | uptime    | lsb               | page0 |
+// |  | Slot 1  | uptime    | p1_card_cnt | CRC |  |    card_reader_port_backup (32 bytes)   | page1 |
 // |  | ...     | ...       | ...         | ... |  |                       msb         | CRC | page2 |
-// |  | Slot 15 | last_time | p1_card_cnt | CRC |  +--...------------------------------------+       |
-// |  +-----------------------------------------+  | Page 0  | last_time | lsb               | page0 |
+// |  | Slot 15 | uptime    | p1_card_cnt | CRC |  +--...------------------------------------+       |
+// |  +-----------------------------------------+  | Page 0  | uptime    | lsb               | page0 |
 // |                                               |    card_reader_port_backup (32 bytes)   | page1 |
 // |  Section 1 (0x100-0x1FF bytes) p2_card_cnt    |                               msb | CRC | page2 |
 // |  +-----------------------------------------+  +-----------------------------------------+       |
-// |  | Slot 0  | last_time | p2_card_cnt | CRC | <- This section's slot size is single page         |
-// |  | Slot 1  | last_time | p2_card_cnt | CRC |                                                    |
+// |  | Slot 0  | uptime    | p2_card_cnt | CRC | <- This section's slot size is single page         |
+// |  | Slot 1  | uptime    | p2_card_cnt | CRC |                                                    |
 // |  | ...     | ...       | ...         | ... |  Section 0..=3 (normal sections, 16 slot-ish data) |
 // |  | Slot 15 | last_time | p2_card_cnt | CRC |  Section  0 : p1_card_cnt          u32    4 bytes  |
 // |  +-----------------------------------------+  Section  1 : p1_card_cnt          u32    4 bytes  |
@@ -49,17 +42,17 @@ assert_eq_size!(FaultLog, [u8; 6]);
 // |                                               Section  3 : p2_coin_cnt          u32    4 bytes  |
 // |  Section 5 (0x480-0x4FF bytes) hw_boot_cnt                                                      |
 // |  +-----------------------------------------+  Section 4..=5 (small sections, 8 slot-ish data)   |
-// |  | Slot 0  | last_time | hw_boot_cnt | CRC |  Section  4 : hw_boot_cnt          u32    4 bytes  |
+// |  | Slot 0  | uptime    | hw_boot_cnt | CRC |  Section  4 : hw_boot_cnt          u32    4 bytes  |
 // |  | ...     | ...       | ...         | ... |  Section  5 : fault_log         Struct    6 bytes  |
-// |  | Slot 7  | last_time | hw_boot_cnt | CRC |                                                    |
+// |  | Slot 7  | uptime    | hw_boot_cnt | CRC |                                                    |
 // |  +-----------------------------------------+                             2/3 page for slot      |
 // |                                               Section 6..=7 (big sections, 8 slot-ish data      |
 // |  Section 6 (0x500-0x5FF bytes) raw_terminal   Section  5 : raw_terminal      Struct   13 bytes  |
 // |  +-----------------------------------------+                           2 pages for single slot  |
-// |  | Slot 0  | last_time | lsb  raw_terminal |                                                    |
+// |  | Slot 0  | uptime    | lsb  raw_terminal |                                                    |
 // |  |         raw_terminal          msb | CRC |  Section  6 : card_reader_port_backup    32 bytes  |
 // |  +--...------------------------------------+                           3 pages for single slot  |
-// |  | Slot 7  | last_time | lsb  raw_terminal | page0                                              |
+// |  | Slot 7  | uptime    | lsb  raw_terminal | page0                                              |
 // |  |         raw_terminal          msb | CRC | page1                                              |
 // |  +-----------------------------------------+                                                    |
 // +-------------------------------------------------------------------------------------------------+
@@ -69,14 +62,14 @@ assert_eq_size!(FaultLog, [u8; 6]);
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 //   | 0x0 | 0x1 | 0x2 | 0x3 | 0x4 | 0x5 | 0x6 | 0x7 | 0x8 | 0x9 | 0xA | 0xB | 0xC | 0xD | 0xE | 0xF |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-//   | last_time : embassy_time::Instant (inner:u64) |   Actual Data (Max 6 byte-size)   |   CRC16   |
+//   | uptime   : embassy_time::Duration (inner:u64) |   Actual Data (Max 6 byte-size)   |   CRC16   |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 //
 //   Daul Page Structure, M24C16's each single page size is 16 bytes.
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 //   | 0x0 | 0x1 | 0x2 | 0x3 | 0x4 | 0x5 | 0x6 | 0x7 | 0x8 | 0x9 | 0xA | 0xB | 0xC | 0xD | 0xE | 0xF |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-//   | last_time : embassy_time::Instant (inner:u64) |                 Actual Data                   |
+//   | uptime   : embassy_time::Duration (inner:u64) |                 Actual Data                   |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 //   |                   (Max 6+14 = 20 byte-size)    Actual Data                        |   CRC16   |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
@@ -85,7 +78,7 @@ assert_eq_size!(FaultLog, [u8; 6]);
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 //   | 0x0 | 0x1 | 0x2 | 0x3 | 0x4 | 0x5 | 0x6 | 0x7 | 0x8 | 0x9 | 0xA | 0xB | 0xC | 0xD | 0xE | 0xF |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
-//   | last_time : embassy_time::Instant (inner:u64) |                 Actual Data                   |
+//   | uptime   : embassy_time::Duration (inner:u64) |                 Actual Data                   |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
 //   |                          (Max 6+16+14 = 36 byte-size)    Actual Data                          |
 //   +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
@@ -103,11 +96,11 @@ pub struct MemStorage {
     pub card_reader_port_backup: CardReaderPortBackup,
 }
 
-/// Tiny control block for manage single section, it include what page is latest and is dirty state
+/// Tiny control block for manage single section, it include what page is longest and is dirty state
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
 /// | b7 |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
-/// |dirty|  robin: number of what page is latest   |
+/// |dirty|  robin: number of what page is longest   |
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
 pub struct NovellaSectionControlBlock {
     inner: u8,
@@ -149,9 +142,10 @@ impl From<u8> for NvMemSectionKind {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct NovellaSelector<T> {
-    section: NvMemSectionKind,
-    marker: PhantomData<T>, // 0-byte guarantees
+    pub section: NvMemSectionKind,
+    pub marker: PhantomData<T>, // 0-byte guarantees
 }
 
 // #[async_trait]
@@ -390,7 +384,7 @@ const ROM_7B_ADDRESS: u8 = 0b1010000; // Embassy require 7bits address as parame
                                       // const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
 const WAIT_DURATION_PER_PAGE: Duration = Duration::from_millis(20); // heuristic value
 const CHECKSUM_SIZE: usize = core::mem::size_of::<Checksum>();
-const TIMESTAMP_SIZE: usize = core::mem::size_of::<Instant>();
+const UPTIME_SIZE: usize = core::mem::size_of::<Duration>();
 const TOTAL_SLOT_NUM: usize = 96; // should be calculated in compile time
 const TOTAL_SLOT_ARR_LEN: usize =
     (TOTAL_SLOT_NUM + core::mem::size_of::<u8>() - 1) / (core::mem::size_of::<u8>() * 8);
@@ -418,6 +412,7 @@ fn novella_i2c_polling_set_default_timeout() {
 pub struct NovellaModuleControlBlock {
     data: MemStorage,
     controls: [NovellaSectionControlBlock; SECTION_NUM],
+    uptime: Duration,
 }
 
 impl NovellaModuleControlBlock {
@@ -476,9 +471,9 @@ impl NovellaModuleControlBlock {
 #[derive(Debug)]
 pub enum NovellaInitOk {
     /// Success for all slots
-    Success(Instant),
+    Success(Duration),
     /// Partially successd, second parameter is fail count
-    PartialSucess(Instant, usize),
+    PartialSucess(Duration, usize),
     /// Assume first boot for this hardware
     FirstBoot,
 }
@@ -544,7 +539,7 @@ impl Novella {
     }
 
     #[inline]
-    fn consider_initial_timestamp(page_idx: u8) -> bool {
+    fn consider_initial_uptime(page_idx: u8) -> bool {
         page_idx == 0
     }
 
@@ -575,7 +570,7 @@ impl Novella {
         &self,
         kind: NvMemSectionKind,
         slot_idx: u8,
-    ) -> Result<Instant, NovellaReadError> {
+    ) -> Result<Duration, NovellaReadError> {
         let bus = unsafe { &mut *self.bus.get() };
         let crc = unsafe { &mut *self.crc.get() };
         let rx_buffer: &mut [u8] = unsafe {
@@ -598,7 +593,7 @@ impl Novella {
         let slot_mem = unsafe { cb.get_data_raw_slice(kind) };
 
         let mut real_data_left = SECTION_TABLE[sect_idx].real_data_size as usize;
-        let mut slot_timestamp = Instant::from_ticks(0);
+        let mut slot_uptime = Duration::from_ticks(0);
         let mut checksum_expected: u16 = 0;
 
         for page_idx in 0..slot_size {
@@ -626,21 +621,20 @@ impl Novella {
                     _ => NovellaReadError::Unknown,
                 })?;
 
-            if Self::consider_initial_timestamp(page_idx) {
-                // Grab time::Instant of slot
+            if Self::consider_initial_uptime(page_idx) {
+                // Grab time::Duration of slot
                 unsafe {
-                    slot_timestamp =
-                        (rx_buffer[0..TIMESTAMP_SIZE].as_ptr() as *const Instant).read();
+                    slot_uptime = (rx_buffer[0..UPTIME_SIZE].as_ptr() as *const Duration).read();
 
                     checksum_expected = crc.feed_words(core::slice::from_raw_parts(
                         (rx_buffer as *const _) as *const u32,
-                        core::mem::size_of::<Instant>() / core::mem::size_of::<u32>(),
+                        core::mem::size_of::<Duration>() / core::mem::size_of::<u32>(),
                     )) as Checksum;
                 }
             }
 
             // copy [slot_real_data_reads..MAX(..)]
-            let start_read = Self::consider_initial_timestamp(page_idx) as usize * TIMESTAMP_SIZE;
+            let start_read = Self::consider_initial_uptime(page_idx) as usize * UPTIME_SIZE;
             let max_real_data_in_page: usize = PAGE_SIZE
                 - start_read
                 - (Self::consider_tailing_checksum(slot_size, page_idx) as usize * CHECKSUM_SIZE);
@@ -666,7 +660,7 @@ impl Novella {
         };
 
         if checksum_given == checksum_expected {
-            Ok(slot_timestamp)
+            Ok(slot_uptime)
         } else {
             Err(NovellaReadError::FaultChecksum)
         }
@@ -677,7 +671,7 @@ impl Novella {
         &self,
         kind: NvMemSectionKind,
         slot_idx: u8,
-        timestamp: Instant,
+        uptime: Duration,
     ) -> Result<(), NovellaWriteError> {
         let bus = unsafe { &mut *self.bus.get() };
         let crc = unsafe { &mut *self.crc.get() };
@@ -711,28 +705,28 @@ impl Novella {
 
             addr_buffer.copy_from_slice(&((raw_addr & 0xFF) as u8).to_be_bytes());
 
-            if Self::consider_initial_timestamp(page_idx) {
-                // Grab time::Instant of slot
+            if Self::consider_initial_uptime(page_idx) {
+                // Grab time::Duration of slot
                 unsafe {
                     // copy for first slice
                     // To avoid mem align issue, just copy 1 by 1.
-                    data_buffer[0..TIMESTAMP_SIZE].copy_from_slice(core::slice::from_raw_parts(
-                        &timestamp as *const _ as *const u8,
-                        core::mem::size_of_val(&timestamp),
+                    data_buffer[0..UPTIME_SIZE].copy_from_slice(core::slice::from_raw_parts(
+                        &uptime as *const _ as *const u8,
+                        core::mem::size_of_val(&uptime),
                     ));
 
                     let words: &[u32] = core::slice::from_raw_parts(
-                        (&timestamp as *const _) as *const u32,
-                        core::mem::size_of::<Instant>() / core::mem::size_of::<u32>(),
+                        (&uptime as *const _) as *const u32,
+                        core::mem::size_of::<Duration>() / core::mem::size_of::<u32>(),
                     );
 
                     // checksum_expected = crc.feed_words(&words) as Checksum;
 
-                    checksum_expected = crc.feed_bytes(&data_buffer[0..TIMESTAMP_SIZE]) as Checksum;
+                    checksum_expected = crc.feed_bytes(&data_buffer[0..UPTIME_SIZE]) as Checksum;
                 }
             }
 
-            let start_write = Self::consider_initial_timestamp(page_idx) as usize * TIMESTAMP_SIZE;
+            let start_write = Self::consider_initial_uptime(page_idx) as usize * UPTIME_SIZE;
             let max_real_data_in_page: usize = PAGE_SIZE
                 - start_write
                 - (Self::consider_tailing_checksum(slot_size, page_idx) as usize * CHECKSUM_SIZE);
@@ -769,10 +763,10 @@ impl Novella {
             novella_i2c_polling_set_default_timeout();
 
             let result = bus
-                .write_timeout(
+                .write(
                     i2c_address,
                     unsafe { &*self.buffer.get() }, // when page is 16, include 1+16 byte will be tx.
-                    novella_i2c_polling_check_timeout,
+                                                    // novella_i2c_polling_check_timeout,
                 )
                 .await;
             // error handling
@@ -817,31 +811,30 @@ impl Novella {
                 _ => NovellaWriteError::Unknown,
             })?;
 
-            if Self::consider_initial_timestamp(page_idx) {
-                // Grab time::Instant of slot
-                let timestamp_words: &[u32] = unsafe {
+            if Self::consider_initial_uptime(page_idx) {
+                // Grab time::Duration of slot
+                let uptime_words: &[u32] = unsafe {
                     core::slice::from_raw_parts(
-                        (&data_buffer[0..TIMESTAMP_SIZE] as *const _) as *const u32,
-                        core::mem::size_of::<Instant>() / core::mem::size_of::<u32>(),
+                        (&data_buffer[0..UPTIME_SIZE] as *const _) as *const u32,
+                        core::mem::size_of_val(&uptime) / core::mem::size_of::<u32>(),
                     )
                 };
-                let timestamp_given: &[u32] = unsafe {
+                let uptime_given: &[u32] = unsafe {
                     core::slice::from_raw_parts(
-                        (&timestamp as *const _) as *const u32,
-                        core::mem::size_of::<Instant>() / core::mem::size_of::<u32>(),
+                        (&uptime as *const _) as *const u32,
+                        core::mem::size_of_val(&uptime) / core::mem::size_of::<u32>(),
                     )
                 };
 
-                if *timestamp_given != *timestamp_words {
+                if *uptime_given != *uptime_words {
                     return Err(NovellaWriteError::Wearout);
                 }
 
-                checksum_double_expected =
-                    crc.feed_bytes(&data_buffer[0..TIMESTAMP_SIZE]) as Checksum;
+                checksum_double_expected = crc.feed_bytes(&data_buffer[0..UPTIME_SIZE]) as Checksum;
             }
 
             // copy [slot_real_data_reads..MAX(..)]
-            let start_read = Self::consider_initial_timestamp(page_idx) as usize * TIMESTAMP_SIZE;
+            let start_read = Self::consider_initial_uptime(page_idx) as usize * UPTIME_SIZE;
             let max_real_data_in_page: usize = PAGE_SIZE
                 - start_read
                 - (Self::consider_tailing_checksum(slot_size, page_idx) as usize * CHECKSUM_SIZE);
@@ -875,9 +868,12 @@ impl Novella {
     /// when success return marked last time
     /// Success to detect eeprom but it's filled in 0xFF or 0xFF are initial factory value, return NovellaInitError::FirstBoot
     /// initialization is not using async/await for safety
-    pub async fn init(&self, noref_eeprom_latest: bool) -> Result<NovellaInitOk, NovellaInitError> {
+    pub async fn init(
+        &self,
+        noref_eeprom_longest: bool,
+    ) -> Result<NovellaInitOk, NovellaInitError> {
         #[inline]
-        fn consider_initial_timestamp(page_idx: u8) -> bool {
+        fn consider_initial_uptime(page_idx: u8) -> bool {
             page_idx == 0
         }
 
@@ -891,7 +887,7 @@ impl Novella {
         let buffer: &mut [u8] = unsafe { &mut *self.buffer.get() };
         let mut broken_map_idx = 0;
         let mut broken_map = [0u8; TOTAL_SLOT_ARR_LEN];
-        let mut latest = Instant::from_ticks(0); // guarantees smallest
+        let mut longest = Duration::from_ticks(0); // guarantees smallest
         let mut broken_detected = 0;
 
         self.set_write_protect();
@@ -899,18 +895,18 @@ impl Novella {
 
         for sect_idx in 0..SECTION_TABLE.len() {
             let kind = NvMemSectionKind::from(sect_idx as u8);
-            let (mut latest_per_sector, mut latest_slot) = (Instant::from_ticks(0), None);
+            let (mut longest_per_sector, mut longest_slot) = (Duration::from_ticks(0), None);
 
             for slot_idx in 0..SECTION_TABLE[sect_idx].slot_num {
                 match self.raw_slot_read(kind, slot_idx).await {
-                    Ok(timestamp) => {
-                        if latest_per_sector <= timestamp {
-                            latest_per_sector = timestamp;
-                            latest_slot = Some(slot_idx);
+                    Ok(uptime) => {
+                        if longest_per_sector <= uptime {
+                            longest_per_sector = uptime;
+                            longest_slot = Some(slot_idx);
                         }
 
-                        if latest < timestamp {
-                            latest = timestamp;
+                        if longest < uptime {
+                            longest = uptime;
                         }
                     }
                     Err(NovellaReadError::FaultChecksum) | Err(NovellaReadError::Unknown) => {
@@ -925,10 +921,10 @@ impl Novella {
                 broken_map_idx += 1;
             }
 
-            let final_slot = if let Some(latest_slot) = latest_slot {
-                // read again for fill latest value on MemStorage.
-                self.raw_slot_read(kind, latest_slot).await; //<- Error handling here.
-                latest_slot
+            let final_slot = if let Some(longest_slot) = longest_slot {
+                // read again for fill longest value on MemStorage.
+                self.raw_slot_read(kind, longest_slot).await; //<- Error handling here.
+                longest_slot
             } else {
                 unsafe {
                     self.mem_storage
@@ -945,8 +941,8 @@ impl Novella {
         }
 
         // Rerun for-loop for following reason,
-        // Before run second loop, need latest timestamp from whole slots in all sections,
-        // and latest index in each section.
+        // Before run second loop, need longest uptime from whole slots in all sections,
+        // and longest index in each section.
 
         if broken_detected != 0 {
             defmt::error!(
@@ -969,15 +965,10 @@ impl Novella {
                         slot_idx
                     );
 
-                    // found broken slot
-                    let renew_timestamp = if noref_eeprom_latest {
-                        Instant::now()
-                    } else {
-                        // Is this really right? need consider elapsed usage later.
-                        Instant::now() + Duration::from_ticks(latest.as_ticks())
-                    };
+                    let renew_uptime =
+                        Duration::from_ticks(longest.as_ticks() + Instant::now().as_ticks());
 
-                    if self.raw_slot_write(kind, slot_idx, renew_timestamp).await
+                    if self.raw_slot_write(kind, slot_idx, renew_uptime).await
                         == Err(NovellaWriteError::MissingEeprom)
                     {
                         return Err(NovellaInitError::MissingEeprom);
@@ -989,10 +980,23 @@ impl Novella {
         }
 
         match broken_detected {
-            0 => Ok(NovellaInitOk::Success(latest)),
+            0 => {
+                self.mem_storage.lock().await.uptime = Duration::from_ticks(longest.as_ticks());
+                Ok(NovellaInitOk::Success(longest))
+            }
             TOTAL_SLOT_NUM => Ok(NovellaInitOk::FirstBoot),
-            x => Ok(NovellaInitOk::PartialSucess(latest, broken_detected)),
+            x => {
+                self.mem_storage.lock().await.uptime = Duration::from_ticks(longest.as_ticks());
+                Ok(NovellaInitOk::PartialSucess(longest, broken_detected))
+            }
         }
+    }
+
+    /// Get uptime of this board
+    pub async fn get_uptime(&self) -> Duration {
+        Duration::from_ticks(
+            self.mem_storage.lock().await.uptime.as_ticks() + Instant::now().as_ticks(),
+        )
     }
 
     async fn run(&self) {
@@ -1000,14 +1004,22 @@ impl Novella {
             for sect_idx in 0..SECTION_TABLE.len() {
                 let kind = NvMemSectionKind::from(sect_idx as u8);
 
-                if let Some(next_slot) = self.mem_storage.lock().await.controls[sect_idx]
-                    .test_and_robin(&SECTION_TABLE[sect_idx])
-                {
-                    defmt::debug!("EEPROM write on [{}][0x{:02X}]", sect_idx, next_slot);
-                    match self.raw_slot_write(kind, next_slot, Instant::now()).await {
+                let dirty_or_next_slot = self.mem_storage.lock().await.controls[sect_idx]
+                    .test_and_robin(&SECTION_TABLE[sect_idx]);
+
+                if let Some(next_slot) = dirty_or_next_slot {
+                    let new_uptime = self.get_uptime().await;
+
+                    defmt::debug!(
+                        "EEPROM write on [{:02}][{:02}], ticks : {}",
+                        sect_idx,
+                        next_slot,
+                        new_uptime
+                    );
+
+                    match self.raw_slot_write(kind, next_slot, new_uptime).await {
                         Ok(_) => {
                             self.mem_storage.lock().await.controls[sect_idx].clr_dirty();
-                            defmt::debug!("success!");
                         }
                         Err(NovellaWriteError::MissingEeprom) => {
                             self.mem_storage.lock().await.controls[sect_idx].clr_dirty();
@@ -1025,7 +1037,7 @@ impl Novella {
                 }
             }
 
-            Timer::after(Duration::from_secs(2));
+            Timer::after(Duration::from_secs(2)).await;
         }
     }
 }
