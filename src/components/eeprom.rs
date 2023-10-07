@@ -868,10 +868,7 @@ impl Novella {
     /// when success return marked last time
     /// Success to detect eeprom but it's filled in 0xFF or 0xFF are initial factory value, return NovellaInitError::FirstBoot
     /// initialization is not using async/await for safety
-    pub async fn init(
-        &self,
-        noref_eeprom_longest: bool,
-    ) -> Result<NovellaInitOk, NovellaInitError> {
+    pub async fn init(&self) -> Result<NovellaInitOk, NovellaInitError> {
         #[inline]
         fn consider_initial_uptime(page_idx: u8) -> bool {
             page_idx == 0

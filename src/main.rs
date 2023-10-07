@@ -33,7 +33,7 @@ async fn main(spawner: Spawner) {
     let eeprom = &board.hardware.eeprom;
 
     // Eeprom Novella module init
-    match eeprom.init(false).await {
+    match eeprom.init().await {
         Ok(crate::components::eeprom::NovellaInitOk::FirstBoot) => {
             defmt::info!("Welcom first boot");
         }
