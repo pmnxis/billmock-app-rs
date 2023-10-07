@@ -9,8 +9,8 @@
 # But consider `const impl` feature issue, use 08-24
 # details 1 : https://github.com/rust-lang/rust/issues/114808
 # details 2 : https://github.com/rust-lang/rust/pull/114781
-channel = "nightly-2023-08-24"
-components = [ "rust-src", "rustfmt", "llvm-tools-preview" ]
+channel = "nightly-2023-10-02"
+components = [ "rust-src", "rustfmt", "llvm-tools" ]
 targets = [
     "thumbv6m-none-eabi",
 ]

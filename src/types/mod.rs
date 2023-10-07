@@ -13,3 +13,5 @@ pub mod const_convert;
 pub mod player;
 
 pub mod buffered_opendrain_kind;
+
+pub mod fault_log;

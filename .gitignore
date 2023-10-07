@@ -10,3 +10,4 @@ third_party
 out/
 nda
 nda_note.md
+*.svd

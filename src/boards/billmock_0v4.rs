@@ -8,8 +8,11 @@
 //! The code follows on version 0.4 schematic
 //! https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v4.pdf
 
+use embassy_stm32::crc::{Config as CrcConfig, Crc, InputReverseConfig};
 use embassy_stm32::exti::{Channel as HwChannel, ExtiInput};
 use embassy_stm32::gpio::{Input, Level, Output, Pin, Pull, Speed};
+use embassy_stm32::i2c::I2c;
+use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::{Config as UsartConfig, Uart};
 use embassy_stm32::{bind_interrupts, peripherals};
 use {defmt_rtt as _, panic_probe as _};
@@ -18,6 +21,7 @@ use super::{Hardware, SharedResource};
 use super::{PLAYER_1_INDEX, PLAYER_2_INDEX};
 use crate::components;
 use crate::components::dip_switch::DipSwitch;
+use crate::components::eeprom::Novella;
 use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::CardReaderDevice;
 use crate::components::vend_side_bill::VendSideBill;
@@ -27,6 +31,7 @@ use crate::types::player::Player;
 
 bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
+    I2C1 => embassy_stm32::i2c::InterruptHandler<peripherals::I2C1>;
 });
 
 static mut USART2_RX_BUF: [u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE] =
@@ -56,9 +61,28 @@ pub fn hardware_init_0v4(
             p.DMA1_CH1,
             usart2_config,
         )
+        .unwrap()
         .split();
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
+
+    let i2c = I2c::new(
+        p.I2C1,
+        p.PB8,
+        p.PB9,
+        Irqs,
+        p.DMA1_CH4,
+        p.DMA1_CH3,
+        Hertz(400_000),
+        Default::default(),
+    );
+
+    // InputReverseConfig::Halfword
+    let Ok(crc_config) = CrcConfig::new(InputReverseConfig::Word, false, 0xA097) else {
+        panic!("Something went horribly wrong")
+    };
+
+    let crc = Crc::new(p.CRC, crc_config);
 
     let async_input_event_ch = &shared_resource.async_input_event_ch.channel;
 
@@ -142,5 +166,10 @@ pub fn hardware_init_0v4(
             Input::new(p.PB12.degrade(), Pull::Up), // DIPSW5
         ),
         card_reader: CardReaderDevice::new(usart2_tx, usart2_rx),
+        eeprom: Novella::const_new(
+            i2c,
+            crc,
+            embassy_stm32::gpio::OutputOpenDrain::new(p.PF0, Level::Low, Speed::Low, Pull::None),
+        ),
     }
 }

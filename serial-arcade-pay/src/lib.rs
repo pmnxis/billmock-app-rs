@@ -11,6 +11,8 @@
 
 #![no_std]
 
+pub mod backup_types;
+
 #[derive(Debug, defmt::Format, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub struct GenericIncomeInfo {
     pub player: Option<u8>,
