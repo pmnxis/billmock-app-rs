@@ -984,7 +984,10 @@ impl Novella {
                 self.mem_storage.lock().await.uptime = Duration::from_ticks(longest.as_ticks());
                 Ok(NovellaInitOk::Success(longest))
             }
-            TOTAL_SLOT_NUM => Ok(NovellaInitOk::FirstBoot),
+            TOTAL_SLOT_NUM => {
+                self.mem_storage.lock().await.uptime = Duration::from_ticks(0);
+                Ok(NovellaInitOk::FirstBoot)
+            }
             x => {
                 self.mem_storage.lock().await.uptime = Duration::from_ticks(longest.as_ticks());
                 Ok(NovellaInitOk::PartialSucess(longest, broken_detected))
