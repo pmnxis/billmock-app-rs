@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 # Difference between two hardware types
 
-| Mini types | regular version 버젼 |
+| Mini types | regular version |
 | ---- | ---- |
 | ![mini image](https://billmock.gpark.biz/images/pcb_top_mini_0v4.png) | ![normal image](https://billmock.gpark.biz/images/pcb_top_0v4.png) |
 

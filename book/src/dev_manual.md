@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: © 2023 Jinwoo Park (pmnxis@gmail.com)
 SPDX-License-Identifier: MIT OR Apache-2.0
 -->
 
-# 개발자 매뉴얼
+# Developer Manual
 
 # Write In Rust
 Used rust experimentally.

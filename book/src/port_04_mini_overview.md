@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 
 # BillMock Mini
 
-![real photo](https://billmock.gpark.biz/images/pcb_0v4_port/BillMockPCB_0v4_mini_rectangle.jpg)
+![real photo](https://billmock.gpark.biz/images/pcb_0v4_mini_port/BillMockPCB_0v4_mini_rectangle.jpg)
 
 | Front side | Back side |
 | ---- | ---- |
