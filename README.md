@@ -24,16 +24,17 @@ This project began development at the request of **GPARK Co., Ltd**<sup>[4](#foo
 The project has been granted an open source disclosure except of NDA era.
 
 ## Target Hardware
-Based on BillMock-HW 0.3 and 0.4. <br/>
-0.2 HW bring-up codes are still left for recyle the old PCB.
+Based on BillMock-HW 0.4 mini and 0.4. <br/>
+0.2 and 0.3 HW bring-up codes are still left for recyle the old PCB.
 - 0.2 HW has different gpio configuration compare to latest boards.
 - 0.3 HW has minor bugs, floating on VendSide-Inhibit and missing net route on VendSide-1P-StartJam.
 - 0.4 HW fixed 0.3 HW bugs.
+- 0.4 HW mini reduced BOM for mass-manufacturing
 
 If need to use old 0.2 HW, run `cargo build --features hw_0v2 --no-default-features`.
 
 ### Target hardware image
-![Actual BillMock PCB 0v3](https://billmock.gpark.biz/images/BillMockPCB_0v3.jpg)
+![Actual BillMock PCB 0v3](https://billmock.gpark.biz/images/BillMockPCB_0v4.jpg)
 
 ### Hardware design
 BillMock hardware schematic repository (only pdf)
@@ -41,17 +42,18 @@ https://github.com/pmnxis/BillMock-HW-RELEASE
 
 The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual Gerber files and project files are private.
 
-#### v 0.2 (2023-06-13)
-[BillMock-HW-0v2.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v2.pdf)
-
-#### v 0.3 (2023-08-11)
-[BillMock-HW-0v3.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf)
+#### v 0.4 Mini (2023-09-12 or 2023-09-13)
+[BillMock-Mini-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch//BillMock-Mini-HW-0v4.pdf)
 
 #### v 0.4 (2023-09-08)
 [BillMock-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v4.pdf)
 
-#### v 0.4 Mini (2023-09-12 or 2023-09-13)
-[BillMock-Mini-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch//BillMock-Mini-HW-0v4.pdf)
+#### ~~v 0.3 (2023-08-11)~~ - DEPRECATED
+~~[BillMock-HW-0v3.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v3.pdf)~~
+
+#### ~~v 0.2 (2023-06-13)~~ - DEPRECATED
+~~[BillMock-HW-0v2.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v2.pdf)~~
+
 
 ## Feature diagram
 ![BillMock feature diagram](https://billmock.gpark.biz/images/billmock_logic_diagram.png)
@@ -60,22 +62,8 @@ The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual G
 See details here [dependencies](docs/dependencies.md)
 
 ### NDA Dependencies
-To build with NDA features (GPARK Limited or own secret dependency), need adding following command on each `cargo` command.
-build, run or any other `cargo` command.
-
-```sh
-# dependency injection from git repository
-# CAUTION , this should be work but not working
---config "patch.'https://github.com/pmnxis/billmock-app-rs.git'.serial-arcade-pay-impl.git = \"https://github.com/user_name/repo_name.git\""
-
-# dependency injection from local repository
-# this works
---config "patch.'https://github.com/pmnxis/billmock-app-rs.git'.serial-arcade-pay-impl.path = \"../repo_name\""
-```
-
-In this repository, experimentally utilize dependency injection that the 'patch' function of 'cargo' to coexist both NDA code and open source example code.
-
-Detail stories [serial-device-limitation](docs/SerialDevice.md)
+- [Dependency Injection for card reader](https://billmock.pmnxis.net/dev/dependency_injection.html)
+- [Detail stories](docs/SerialDevice.md)
 
 ## License
 This program and the accompanying materials are made available under the terms

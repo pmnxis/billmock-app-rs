@@ -20,3 +20,8 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         - [Vend side (Top)](./port_vend_side.md)
         - [Host Side (Bottom)](./port_host_side.md)
         - [Miscellaneous](./port_etc.md)
+- [Developer Manual 🛠️⚠️](./dev_manual.md)
+    - [Software 👨🏽‍💻](./dev/software.md)
+        - [Develop Environment](./dev/develop_environment.md)
+        - [Dependency Injection](./dev/dependency_injection.md)
+    - [Hardware 🔩](./dev/hardware.md)
