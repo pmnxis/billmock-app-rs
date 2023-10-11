@@ -10,6 +10,9 @@
 //! This interface has limited feature or fields for commonrize and hiding NDA protocol.
 
 #![no_std]
+#![feature(async_fn_in_trait)]
+
+use backup_types::{CardReaderPortBackup, RawTerminalId};
 
 pub mod backup_types;
 
@@ -107,6 +110,8 @@ pub enum GenericPaymentRecv {
     SetBusyState(bool),
     /// Check Inhibit state
     CheckInhibit(TinyGenericInhibitInfo),
+    /// Response of CheckSaleSlotInfo, return value would be reduced TinyGenericInhibitInfo
+    SaleSlotInfoResponse,
     /// Failed payment
     Failed,
     /// Unknown
@@ -132,8 +137,11 @@ pub enum GenericPaymentRequest {
     /// Request
     SetInhibit(TinyGenericInhibitInfo),
     /// DisplayRom
-    // Display ROM, best approach is passing all arguments, to reduce queue usage, just use shared memory (mutex)
+    /// Display ROM, best approach is passing all arguments, to reduce queue usage, just use shared memory (mutex)
     DisplayRom,
+    /// CheckSaleSlotInfo
+    /// Get slot_info,
+    CheckSaleSlotInfo,
 }
 
 #[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
