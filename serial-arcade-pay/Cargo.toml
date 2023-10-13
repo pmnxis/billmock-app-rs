@@ -15,3 +15,4 @@ description = "Common arcade serial type payment method interface for billmock-a
 [dependencies]
 defmt = "0.3"
 static_assertions = "1.1.0"
+bit_field = "0.10"

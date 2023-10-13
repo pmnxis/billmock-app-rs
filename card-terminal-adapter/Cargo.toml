@@ -11,3 +11,4 @@ description = "Card terminal interface adapte for billmock-app-rs"
 [dependencies]
 static_assertions = "1.1.0"
 defmt = "0.3"
+zeroable = "0.2.0"

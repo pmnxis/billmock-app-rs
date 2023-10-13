@@ -177,6 +177,7 @@ impl AnyExampleDevice for ExampleByteRecv {
                 // skip implementation because, this is just example code
                 unimplemented!("DisplayRom not implementated");
             }
+            _ => unimplemented!(),
         };
 
         tx_inner_buff[INNER_DATA_CMD_OFFSET] = tx_cmd;

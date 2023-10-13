@@ -12,23 +12,16 @@
 
 #![no_std]
 
-pub mod backup_types;
+pub mod types;
 
-use backup_types::{CardReaderPortBackup, RawTerminalId};
+use types::*;
 
 pub enum TerminalVersion {
     ArcadeSpecificLatest,
     ArcadeSpecificLegacy,
     GenericPriceIncomeType,
     Experimental,
-}
-
-pub struct RawU24Price(pub [u8; 3]);
-
-pub struct RawU24IncomeArcade([u8; 3]);
-
-pub struct RawPlayersInhibit {
-    inner: u8,
+    Unknown,
 }
 
 #[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -47,6 +40,8 @@ pub enum CardTerminalError {
     VarientNotSupportRequest,
     /// Wrong src, suggest to check RX/TX are shorted.
     WrongSource,
+    /// Failed Response
+    FailedResponse,
 }
 
 pub enum CardTerminalRxCmd {
@@ -64,7 +59,7 @@ pub enum CardTerminalRxCmd {
 
     /// Detail pakcet data should be parsed with additional function call.
     /// using additional function call for avoid queue size being huge.
-    ResponseSaleSlotInfo(RawPlayersInhibit),
+    ResponseSaleSlotInfo,
     /// 0xFB 0x14 0x02
     /// Detail pakcet data should be parsed with additional function call.
     /// using additional function call for avoid queue size being huge.
@@ -98,42 +93,73 @@ pub enum CardTerminalDisplayWarning {
     RequireArcadeSpecificVersion,
     RequireLatestTerminalVersion,
     WarnExperimentalVesion,
+    WarnUnknown,
 }
+
+pub const TID_LEN: usize = 10;
+pub const FW_VER_LEN: usize = 5;
+pub const DEV_SN_LEN: usize = 12;
+pub const GIT_HASH_LEN: usize = 9;
 
 pub trait CardTerminalRxParse {
     fn pre_parse_common(&self, raw: &[u8]) -> Result<CardTerminalRxCmd, CardTerminalError>;
 
     fn post_parse_response_sale_slot_info(
         &self,
-        packet: &[u8],
+        raw: &[u8],
     ) -> Result<CardReaderPortBackup, CardTerminalError>;
 
     fn post_parse_response_terminal_info(
         &self,
-        packet: &[u8],
-    ) -> Result<RawTerminalId, CardTerminalError>;
+        raw: &[u8],
+    ) -> Result<(TerminalVersion, RawTerminalId), CardTerminalError>;
 }
 
 pub trait CardTerminalTxGen {
-    fn response_ack(&self);
+    fn response_ack<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
-    fn response_nack(&self);
+    fn response_nack<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
+    // OK
     /// Response for requesting device information
-    fn response_device_info(&self);
+    fn response_device_info<'a>(
+        &self,
+        buffer: &'a mut [u8],
+        model_version: &'a [u8; FW_VER_LEN],
+        serial_number: &'a [u8; DEV_SN_LEN],
+    ) -> &'a [u8];
 
-    fn alert_coin_paper_acceptor_income(&self);
+    fn alert_coin_paper_acceptor_income<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
-    fn request_sale_slot_info(&self);
+    // OK
+    fn request_sale_slot_info<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
-    fn request_terminal_info(&self);
+    // OK
+    fn request_terminal_info<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
+    // OK
     /// Display card / coin count for player 1 and 2 on LCD of card terminal.
-    fn display_rom(&self, p1_card: u32, p2_card: u32, p1_coin: u32, p2_coin: u32, tid: &[u8]);
+    fn display_rom<'a>(
+        &self,
+        buffer: &'a mut [u8],
+        git_hash: &'a [u8; GIT_HASH_LEN],
+        terminal_id: &'a [u8; TID_LEN],
+        p1_card: u32,
+        p2_card: u32,
+        p1_coin: u32,
+        p2_coin: u32,
+    ) -> &'a [u8];
 
+    // OK
     /// Display hardware information, boot count, uptime and etc.
-    fn display_hw_info(&self, hw_boot_cnt: u32, minutes: u32);
+    fn display_hw_info<'a>(&self, buffer: &'a mut [u8], hw_boot_cnt: u32, minutes: u32)
+        -> &'a [u8];
 
+    // OK
     /// Display warning that need to update to latest terminal version firmware or something
-    fn display_warning(&self, warn_kind: CardTerminalDisplayWarning);
+    fn display_warning<'a>(
+        &self,
+        buffer: &'a mut [u8],
+        warn_kind: CardTerminalDisplayWarning,
+    ) -> &'a [u8];
 }
