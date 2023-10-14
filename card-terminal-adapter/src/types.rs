@@ -30,7 +30,7 @@ impl From<RawU24Price> for u32 {
     }
 }
 
-#[derive(Clone, Zeroable)]
+#[derive(Clone, Zeroable, PartialEq, Eq, Debug)]
 pub struct IncomeArcadeRequest {
     pub port: u8,
     pub pulse_count: u16,
@@ -48,10 +48,20 @@ impl From<IncomeArcadeRequest> for RawU24IncomeArcade {
         let pulse_duration = value.pulse_duration.min(999);
 
         Self([
-            (value.port << 4) | ((value.pulse_count >> 6) as u8 & 0xF),
-            ((pulse_count as u8) << 6) | ((pulse_duration >> 8) as u8 & 0x3),
+            (value.port << 4) | ((pulse_count >> 6) as u8 & 0xF),
+            ((pulse_count as u8) << 2) | ((pulse_duration >> 8) as u8 & 0x3),
             pulse_duration as u8,
         ])
+    }
+}
+
+impl From<RawU24IncomeArcade> for IncomeArcadeRequest {
+    fn from(value: RawU24IncomeArcade) -> Self {
+        Self {
+            port: value.0[0] >> 4,
+            pulse_count: (((value.0[0] & 0x0F) as u16) << 6) | (value.0[1] >> 2) as u16,
+            pulse_duration: (((value.0[1] & 0x03) as u16) << 8) | value.0[2] as u16,
+        }
     }
 }
 

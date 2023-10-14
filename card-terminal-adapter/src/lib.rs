@@ -49,14 +49,11 @@ pub enum CardTerminalRxCmd {
     Ack,
     /// Nack signal
     Nack,
-
     RequestDeviceInfo,
     /// For generic credit card terminal (not arcade specific customized version)
     AlertPaymentIncomePrice(RawU24Price),
-
     /// For arcade speicific customied version credit card terminal
     AlertPaymentIncomeArcade(RawU24IncomeArcade),
-
     /// Detail pakcet data should be parsed with additional function call.
     /// using additional function call for avoid queue size being huge.
     ResponseSaleSlotInfo,
@@ -75,17 +72,20 @@ pub enum CardTerminalTxCmd {
     ResponseDeviceInfo,
     /// For arcade speicific customied version credit card terminal
     PushCoinPaperAcceptorIncome(RawU24IncomeArcade),
+    /// Get sale slot from card terminal
     RequestSaleSlotInfo,
+    /// Overwrite sale slot info to card terminal
+    /// It's for rollback or treat as inihibit action
     PushSaleSlotInfo,
     /// Mixed request of PushSaleSlotInfo,
     PushSaleSlotInfoPartialInhibit(RawPlayersInhibit),
-
+    /// Request terminal info, include TID, terminal program version etc.
     RequestTerminalInfo,
-    /// Display
+    /// Display ROM (P1/P2 Card and Coin Meter)
     DisplayRom,
-
+    /// Display HW Info (S/N, FW version ... etc)
     DisplayHwInfo,
-
+    /// Display Warnings
     DisplayWarning(CardTerminalDisplayWarning),
 }
 
@@ -116,12 +116,14 @@ pub trait CardTerminalRxParse {
 }
 
 pub trait CardTerminalTxGen {
+    // Generate ACK signal to send
     fn response_ack<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
+    // Generate NACK signal to send
     fn response_nack<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
-    // OK
-    /// Response for requesting device information
+    /// Generate ResponseDeviceInfo signal to send
+    /// Response for requesting device information (RequestDeviceInfo)
     fn response_device_info<'a>(
         &self,
         buffer: &'a mut [u8],
@@ -129,15 +131,37 @@ pub trait CardTerminalTxGen {
         serial_number: &'a [u8; DEV_SN_LEN],
     ) -> &'a [u8];
 
-    fn alert_coin_paper_acceptor_income<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
+    /// Generate PushCoinPaperAcceptorIncome signal to send
+    fn alert_coin_paper_acceptor_income<'a>(
+        &self,
+        buffer: &'a mut [u8],
+        income: RawU24IncomeArcade,
+    ) -> &'a [u8];
 
-    // OK
+    /// Generate PushSaleSlotInfo signal to send
+    /// This action send for all slots without modification
+    fn push_sale_slot_info<'a>(
+        &self,
+        buffer: &'a mut [u8],
+        port_backup: &'a CardReaderPortBackup,
+    ) -> &'a [u8];
+
+    /// Generate PushSaleSlotInfoPartialInhibit signal to send
+    /// This action send with modificated slots to inhibit sale slot for inhibit behavior
+    fn push_sale_slot_info_partial_inhibit<'a>(
+        &self,
+        buffer: &'a mut [u8],
+        port_backup: &'a CardReaderPortBackup,
+        raw_partial: RawPlayersInhibit,
+    ) -> &'a [u8];
+
+    /// Generate RequestSaleSlotInfo signal to send
     fn request_sale_slot_info<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
-    // OK
+    /// Generate RequestTerminalInfo signal to send
     fn request_terminal_info<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];
 
-    // OK
+    /// Generate DisplayRom signal to send
     /// Display card / coin count for player 1 and 2 on LCD of card terminal.
     fn display_rom<'a>(
         &self,
@@ -150,12 +174,19 @@ pub trait CardTerminalTxGen {
         p2_coin: u32,
     ) -> &'a [u8];
 
-    // OK
+    /// Generate DisplayHwInfo signal to send
     /// Display hardware information, boot count, uptime and etc.
-    fn display_hw_info<'a>(&self, buffer: &'a mut [u8], hw_boot_cnt: u32, minutes: u32)
-        -> &'a [u8];
+    fn display_hw_info<'a>(
+        &self,
+        buffer: &'a mut [u8],
+        model_version: &'a [u8; FW_VER_LEN],
+        serial_number: &'a [u8; DEV_SN_LEN],
+        terminal_id: &'a [u8; TID_LEN],
+        hw_boot_cnt: u32,
+        uptime_minutes: u32,
+    ) -> &'a [u8];
 
-    // OK
+    /// Generate DisplayWarning signal to send
     /// Display warning that need to update to latest terminal version firmware or something
     fn display_warning<'a>(
         &self,
