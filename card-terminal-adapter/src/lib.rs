@@ -78,6 +78,7 @@ pub enum CardTerminalTxCmd {
     /// It's for rollback or treat as inihibit action
     PushSaleSlotInfo,
     /// Mixed request of PushSaleSlotInfo,
+    /// todo! - This queue element should be touched later
     PushSaleSlotInfoPartialInhibit(RawPlayersInhibit),
     /// Request terminal info, include TID, terminal program version etc.
     RequestTerminalInfo,
@@ -152,7 +153,6 @@ pub trait CardTerminalTxGen {
         &self,
         buffer: &'a mut [u8],
         port_backup: &'a CardReaderPortBackup,
-        raw_partial: RawPlayersInhibit,
     ) -> &'a [u8];
 
     /// Generate RequestSaleSlotInfo signal to send

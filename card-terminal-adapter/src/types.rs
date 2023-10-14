@@ -12,7 +12,7 @@ pub struct RawU24Price(pub [u8; 3]);
 
 impl From<u32> for RawU24Price {
     fn from(value: u32) -> Self {
-        // big endian
+        // big endianSlotPriceGameNum
         let value = value.min((1 << 24) - 1);
 
         Self([
@@ -66,8 +66,8 @@ impl From<RawU24IncomeArcade> for IncomeArcadeRequest {
 }
 
 pub struct RawPlayersInhibit {
-    pub p1: u8,
-    pub p2: u8,
+    pub p1: bool,
+    pub p2: bool,
 }
 
 #[repr(C)]
@@ -99,16 +99,33 @@ pub struct RawU32SlotPriceGameNum(u32);
 impl From<SlotPriceGameNum> for RawU32SlotPriceGameNum {
     fn from(value: SlotPriceGameNum) -> Self {
         Self {
-            0: ((value.price.max(99_999) & ((1 << 17) - 1)) << 10)
-                | ((value.game_num.max(999) & ((1 << 10) - 1)) as u32),
+            0: ((value.price.min(99_999) & ((1 << 17) - 1)) << 10)
+                | ((value.game_num.min(999) & ((1 << 10) - 1)) as u32),
         }
     }
+}
+
+impl From<RawU32SlotPriceGameNum> for SlotPriceGameNum {
+    fn from(value: RawU32SlotPriceGameNum) -> Self {
+        Self {
+            price: (value.0 >> 10) & ((1 << 17) - 1),
+            game_num: (value.0 & ((1 << 10) - 1)) as u16,
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy, Zeroable)]
+pub enum SlotProperty {
+    Disabled,
+    Enabled,
+    TemporaryDisabled,
 }
 
 #[derive(Clone, Zeroable)]
 pub struct RawCardPortBackup {
     // is enabled?
-    pub is_enabled: bool,
+    pub property: SlotProperty,
     // Contains pulse count, pulse duration
     pub raw_extended: RawU32SlotPriceGameNum,
     pub raw_minimum: RawU24IncomeArcade,
@@ -118,7 +135,10 @@ assert_eq_size!(RawCardPortBackup, [u8; 8]);
 impl From<(SlotPriceGameNum, IncomeArcadeRequest)> for RawCardPortBackup {
     fn from((extended, minimum): (SlotPriceGameNum, IncomeArcadeRequest)) -> Self {
         Self {
-            is_enabled: extended.game_num != 0,
+            property: match extended.game_num {
+                0 => SlotProperty::Disabled,
+                _ => SlotProperty::Enabled,
+            },
             raw_extended: extended.into(),
             raw_minimum: minimum.into(),
         }
