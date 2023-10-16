@@ -39,20 +39,23 @@ num_enum = { version = "0.7.0", default-features = false } # Application specifi
 bit_field = "0.10"
 nonmax = { version = "0.5.3", default-features = false, features = [] } # to use common NonMax
 static_assertions = "1.1.0"
+env_to_array = { version = "0.3.1", features = ["hex"] }
 
 # Application specific library
 
-# serial-arcade-pay = { path = "serial-arcade-pay" }
-# serial-arcade-pay-impl = { path = "serial-arcade-example" }
+# card-terminal-adapter = { path = "card-terminal-adapter" }
+# billmock-plug-card = { path = "serial-arcade-example" }
 
 # The above dependency configurations are intentionally set to an external address in this repository
 # for the purpose of compiling both the original and NDA code simultaneously.
 # However, in reality, during a regular build, due to the patched content in `.cargo/config.toml`,
 # the code accesses the locally stored directory directly without connecting to the URL.
-# `serial-arcade-pay-impl` would be replaced to NDA library that working on real field with dependency injection
+# `billmock-plug-card` would be replaced to NDA library that working on real field with dependency injection
 # details : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
-serial-arcade-pay = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
-serial-arcade-pay-impl = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
+
+# uncoment later
+card-terminal-adapter = { git = "https://github.com/pmnxis/billmock-app-rs.git", branch = "dev/23_disp_rom_read_tid_serial_refacto" }
+billmock-plug-card = { git = "https://github.com/pmnxis/billmock-app-rs.git", branch = "dev/23_disp_rom_read_tid_serial_refacto" }
 
 [build-dependencies]
 git2 = "0.18" # Git library for Rust

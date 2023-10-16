@@ -9,6 +9,7 @@ use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 
+use card_terminal_adapter::types::*;
 use embassy_stm32::crc::Crc;
 use embassy_stm32::gpio::OutputOpenDrain; // this can be replaced to Output
 use embassy_stm32::i2c::I2c;
@@ -16,7 +17,6 @@ use embassy_stm32::peripherals::{self};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_time::{Duration, Instant, Timer};
-use serial_arcade_pay::backup_types::*;
 
 use crate::types::fault_log::FaultLog;
 

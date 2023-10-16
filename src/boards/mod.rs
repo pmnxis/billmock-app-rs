@@ -36,12 +36,7 @@ pub const LED_INDEX_MAX: usize = 2;
 pub const LED_1_INDEX: usize = 0;
 pub const LED_2_INDEX: usize = 1;
 
-const PROJECT_NAME: &str = env!("PROJECT_NAME");
-const VERSION_STR: &str = env!("PROJECT_VERSION");
-const COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
-const COMMIT_SHORT: &str = env!("GIT_COMMIT_SHORT_HASH");
-const GIT_COMMIT_DATETIME: &str = env!("GIT_COMMIT_DATETIME");
-const PRINT_BAR: &str = "+-----------------------------------------------------------+";
+pub mod const_str;
 
 #[cfg(feature = "hw_0v2")]
 mod billmock_0v2;
@@ -223,12 +218,15 @@ impl Board {
     pub fn init() -> Self {
         let p = Hardware::mcu_pre_init();
 
-        // print my info
-        defmt::println!("{}", PRINT_BAR);
-        defmt::println!("Firmware Ver : {} {}", PROJECT_NAME, VERSION_STR);
-        defmt::println!("Git Hash     : {}", COMMIT_HASH);
-        defmt::println!("Git Datetime : {} | {}", GIT_COMMIT_DATETIME, COMMIT_SHORT);
-        defmt::println!("{}", PRINT_BAR);
+        // https://defmt.ferrous-systems.com/hints.html#display-hints
+        // defmt::info!("{=[u8]:a}", bytes); // -> INFO b"he\xffllo"
+        defmt::println!("{}", const_str::PRINT_BAR);
+        #[rustfmt::skip]
+        defmt::println!("Firmware Ver : {} {=[u8]:a}", const_str::PROJECT_NAME, const_str::VERSION_STR);
+        defmt::println!("Git Hash     : {}", const_str::COMMIT_HASH);
+        #[rustfmt::skip]
+        defmt::println!("Git Datetime : {} | {=[u8]:a}", const_str::GIT_COMMIT_DATETIME, const_str::COMMIT_SHORT);
+        defmt::println!("{}", const_str::PRINT_BAR);
 
         let shared_resource = make_static!(SharedResource::init());
         let hardware: Hardware = Hardware::hardware_init(p, shared_resource);

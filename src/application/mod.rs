@@ -10,14 +10,16 @@ mod io_remap;
 mod mutual_inhibit;
 mod player_to_vend_led;
 
+use card_terminal_adapter::types::*;
+use card_terminal_adapter::*;
 use embassy_futures::yield_now;
 use embassy_time::Duration;
 use embassy_time::Timer;
 use io_card::PaymentReceive;
-use serial_arcade_pay::{GenericIncomeInfo, GenericPaymentRecv};
 
 use self::mutual_inhibit::MutualInhibit;
 use crate::boards::*;
+use crate::semi_layer;
 use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::dip_switch_config::{AppMode0V3, TimingOverride};
 use crate::types::input_port::{InputEvent, InputPortKind};
@@ -46,7 +48,7 @@ impl Application {
         let mut timing = TimingOverride::default();
         let mut appmode = AppMode0V3::default();
         let mut default_serial = Player::Undefined;
-        let mut income_backup: Option<GenericIncomeInfo> = None; // for StartButtonDecideSerialToVend
+        let mut income_backup: Option<PaymentReceive> = None; // for StartButtonDecideSerialToVend
         let mut mutual_inhibit = MutualInhibit::new();
 
         loop {
@@ -93,48 +95,79 @@ impl Application {
             }
 
             if let Ok(x) = hardware.card_reader.recv_channel.try_receive() {
-                if x == GenericPaymentRecv::InitialHandshake {
-                    hardware
-                        .card_reader
-                        .send(serial_arcade_pay::GenericPaymentRequest::ResponseInitialHandshake)
-                        .await;
-                }
-
-                match (
-                    appmode,
-                    income_backup.is_some(),
-                    PaymentReceive::from((default_serial, x)),
-                ) {
-                    (
-                        AppMode0V3::StartButtonDecideSerialToVend,
-                        true,
-                        PaymentReceive {
-                            origin: Player::Undefined,
-                            recv: GenericPaymentRecv::Income(_payment),
-                        },
-                    ) => {
-                        defmt::warn!("StartButtonDecideSerialToVend - duplicated income received, player should press start button.");
-                        hardware.card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
-                    }
-                    (
-                        AppMode0V3::StartButtonDecideSerialToVend,
-                        false,
-                        PaymentReceive {
-                            origin: Player::Undefined,
-                            recv: GenericPaymentRecv::Income(payment),
-                        },
-                    ) => {
-                        defmt::info!("StartButtonDecideSerialToVend - income received, wait for start button");
-                        income_backup = Some(payment);
-                        hardware.card_reader.send_ack().await;
-                    }
-                    (_, _, packet) => {
-                        packet
-                            .override_player_by_duration()
-                            .apply_output(board, timing.is_override_force())
+                match x {
+                    CardTerminalRxCmd::RequestDeviceInfo => {
+                        hardware
+                            .card_reader
+                            .send(CardTerminalTxCmd::ResponseDeviceInfo)
                             .await;
-                        hardware.card_reader.send_ack().await;
                     }
+                    CardTerminalRxCmd::AlertPaymentIncomeArcade(raw_income) => {
+                        // judge current application mode and income backup
+                        let payment = PaymentReceive::from((default_serial, raw_income.into()));
+
+                        if appmode == AppMode0V3::StartButtonDecideSerialToVend {
+                            match income_backup.is_some() {
+                                true => {
+                                    defmt::warn!("StartButtonDecideSerialToVend - duplicated income received, player should press start button.");
+                                    hardware.card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
+                                }
+                                false => {
+                                    defmt::info!("StartButtonDecideSerialToVend - income received, wait for start button");
+                                    income_backup = Some(payment);
+                                    hardware.card_reader.send_ack().await;
+                                }
+                            }
+                        } else {
+                            payment
+                                // .override_player_by_duration()
+                                .apply_output(board, timing.is_override_force())
+                                .await;
+                            hardware.card_reader.send_ack().await;
+                        }
+                    }
+                    CardTerminalRxCmd::AlertPaymentIncomePrice(raw_price) => {
+                        let u32_price: u32 = raw_price.into();
+
+                        let payment = PaymentReceive::from((
+                            default_serial,
+                            IncomeArcadeRequest {
+                                port: 0, // fake value,
+                                pulse_count: (u32_price / 500).max(1).max(u8::MAX as u32) as u16,
+                                pulse_duration: semi_layer::timing::ToggleTiming::default().high_ms,
+                            },
+                        ));
+
+                        if appmode == AppMode0V3::StartButtonDecideSerialToVend {
+                            match income_backup.is_some() {
+                                true => {
+                                    defmt::warn!("StartButtonDecideSerialToVend - duplicated income received, player should press start button.");
+                                    hardware.card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
+                                }
+                                false => {
+                                    defmt::info!("StartButtonDecideSerialToVend - income received, wait for start button");
+                                    income_backup = Some(payment);
+                                    hardware.card_reader.send_ack().await;
+                                }
+                            }
+                        } else {
+                            payment
+                                // .override_player_by_duration()
+                                .apply_output(board, timing.is_override_force())
+                                .await;
+                            hardware.card_reader.send_ack().await;
+                        }
+                    }
+                    CardTerminalRxCmd::ResponseSaleSlotInfo => {
+                        // read from lock_read for do something
+                        // todo! - handle different TId/and something
+                    }
+                    CardTerminalRxCmd::ResponseTerminalInfo => {
+                        // read from lock_read for do something
+                        // todo! - handle different TID/and something
+                    }
+
+                    _ => {}
                 }
             }
 
@@ -173,7 +206,7 @@ impl Application {
             };
 
             // StartButtonDecideSerialToVend related
-            if let Some((player, income, p_idx, ms)) = match (income_backup, input_event) {
+            if let Some((player, income, p_idx, ms)) = match (income_backup.clone(), input_event) {
                 (
                     Some(income),
                     Some(InputEvent {
@@ -198,7 +231,7 @@ impl Application {
 
                 PaymentReceive {
                     origin: player,
-                    recv: GenericPaymentRecv::Income(income),
+                    recv: income.recv,
                 }
                 .apply_output(board, timing.is_override_force())
                 .await;

@@ -8,6 +8,7 @@
 use static_assertions::*;
 use zeroable::Zeroable;
 
+#[derive(PartialEq, Eq, Clone)]
 pub struct RawU24Price(pub [u8; 3]);
 
 impl From<u32> for RawU24Price {
@@ -30,7 +31,7 @@ impl From<RawU24Price> for u32 {
     }
 }
 
-#[derive(Clone, Zeroable, PartialEq, Eq, Debug)]
+#[derive(Debug, Zeroable, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct IncomeArcadeRequest {
     pub port: u8,
     pub pulse_count: u16,
@@ -39,8 +40,15 @@ pub struct IncomeArcadeRequest {
 
 /// [port: 4b, pulse_count: msb-4b], [pulse_count: 6b-lsb, pulse_duration: msb-2]
 /// [pulse_duration: 8b-lsb]
-#[derive(Clone, Zeroable)]
+#[derive(Clone, Zeroable, PartialEq, Eq)]
 pub struct RawU24IncomeArcade([u8; 3]);
+
+impl defmt::Format for RawU24IncomeArcade {
+    fn format(&self, fmt: defmt::Formatter) {
+        let raw_u24_income_arcade = IncomeArcadeRequest::from(self.clone());
+        defmt::write!(fmt, "{:?}", raw_u24_income_arcade);
+    }
+}
 
 impl From<IncomeArcadeRequest> for RawU24IncomeArcade {
     fn from(value: IncomeArcadeRequest) -> Self {
@@ -65,6 +73,13 @@ impl From<RawU24IncomeArcade> for IncomeArcadeRequest {
     }
 }
 
+impl RawU24IncomeArcade {
+    pub fn get_port_num(&self) -> u8 {
+        self.0[0] >> 4
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct RawPlayersInhibit {
     pub p1: bool,
     pub p2: bool,
@@ -82,11 +97,6 @@ assert_eq_size!(RawTerminalId, [u8; 13]);
 pub struct RawPortPulseCountDuration {
     pub inner: u32,
 }
-
-// #[derive(Clone)]
-// pub struct RawGameNumPrice {
-//     pub
-// }
 
 pub struct SlotPriceGameNum {
     pub price: u32,
@@ -114,8 +124,14 @@ impl From<RawU32SlotPriceGameNum> for SlotPriceGameNum {
     }
 }
 
+impl RawU32SlotPriceGameNum {
+    pub fn get_game_num(&self) -> u16 {
+        (self.0 & ((1 << 10) - 1)) as u16
+    }
+}
+
 #[repr(u8)]
-#[derive(Clone, Copy, Zeroable)]
+#[derive(Clone, Copy, Zeroable, PartialEq, PartialOrd)]
 pub enum SlotProperty {
     Disabled,
     Enabled,
@@ -159,6 +175,23 @@ pub struct CardReaderPortBackup {
 impl CardReaderPortBackup {
     pub fn empty_slot() -> Self {
         Self::zeroed()
+    }
+
+    // 0 is player 1, <- this is temporary decide,
+    // 1 is player 2, <- this is temporary decide,
+    pub fn guess_player_by_port_num(&self, port_num: u8) -> u8 {
+        for backup in &self.raw_card_port_backup {
+            if backup.raw_minimum.get_port_num() == port_num {
+                let game_num = backup.raw_extended.get_game_num();
+
+                return match (game_num, (game_num & 0x1) == 0x1) {
+                    (0, _) => 0,
+                    (_, true) => 0,
+                    (_, false) => 1,
+                };
+            }
+        }
+        0
     }
 }
 

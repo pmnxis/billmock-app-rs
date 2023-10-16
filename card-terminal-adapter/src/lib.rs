@@ -11,6 +11,7 @@
 //! specific firmware while considering the existing adapter as a reference.
 
 #![no_std]
+#![feature(const_trait_impl)]
 
 pub mod types;
 
@@ -44,6 +45,7 @@ pub enum CardTerminalError {
     FailedResponse,
 }
 
+#[derive(PartialEq, Eq, Clone)]
 pub enum CardTerminalRxCmd {
     /// Ack signal
     Ack,
@@ -63,6 +65,7 @@ pub enum CardTerminalRxCmd {
     ResponseTerminalInfo,
 }
 
+#[derive(PartialEq, Eq, Clone)]
 pub enum CardTerminalTxCmd {
     /// Ack signal
     Ack,
@@ -90,6 +93,7 @@ pub enum CardTerminalTxCmd {
     DisplayWarning(CardTerminalDisplayWarning),
 }
 
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum CardTerminalDisplayWarning {
     RequireArcadeSpecificVersion,
     RequireLatestTerminalVersion,
@@ -102,14 +106,21 @@ pub const FW_VER_LEN: usize = 5;
 pub const DEV_SN_LEN: usize = 12;
 pub const GIT_HASH_LEN: usize = 9;
 
+#[const_trait]
+pub trait CardTerminalConst {
+    fn is_nda() -> bool;
+}
+
 pub trait CardTerminalRxParse {
     fn pre_parse_common(&self, raw: &[u8]) -> Result<CardTerminalRxCmd, CardTerminalError>;
 
+    // Parse ResponseSaleSlotInfo with after pre_parse_common call
     fn post_parse_response_sale_slot_info(
         &self,
         raw: &[u8],
     ) -> Result<CardReaderPortBackup, CardTerminalError>;
 
+    // Parse ResponseTerminalInfo with after pre_parse_common call
     fn post_parse_response_terminal_info(
         &self,
         raw: &[u8],
