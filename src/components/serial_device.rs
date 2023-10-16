@@ -6,7 +6,7 @@
 
 use core::cell::UnsafeCell;
 
-use billmock_plug_ed785::*; // todo! - rename me later
+use billmock_plug_card::*; // todo! - rename me later
 use card_terminal_adapter::types::*;
 use card_terminal_adapter::*;
 use embassy_stm32::peripherals::USART2;
