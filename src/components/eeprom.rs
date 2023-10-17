@@ -148,6 +148,45 @@ pub struct NovellaSelector<T> {
     pub marker: PhantomData<T>, // 0-byte guarantees
 }
 
+#[allow(unused)]
+pub mod select {
+    use super::*;
+    use crate::types::fault_log::FaultLog;
+
+    pub const P1_CARD_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P1CardCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const P2_CARD_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P2CardCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const P1_COIN_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P1CoinCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const P2_COIN_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P2CoinCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const FAULT_LOG: NovellaSelector<FaultLog> = NovellaSelector {
+        section: NvMemSectionKind::FaultLog,
+        marker: core::marker::PhantomData,
+    };
+    pub const HW_BOOT_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::HwBootCount,
+        marker: core::marker::PhantomData,
+    };
+    pub const TERMINAL_ID: NovellaSelector<RawTerminalId> = NovellaSelector {
+        section: NvMemSectionKind::TerminalId,
+        marker: core::marker::PhantomData,
+    };
+    pub const CARD_PORT_BACKUP: NovellaSelector<CardReaderPortBackup> = NovellaSelector {
+        section: NvMemSectionKind::CardPortBackup,
+        marker: core::marker::PhantomData,
+    };
+}
+
 // #[async_trait]
 pub trait NovellaRw {
     type InnerType: Sized;

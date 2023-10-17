@@ -24,7 +24,7 @@ use {defmt_rtt as _, panic_probe as _};
 
 use crate::application::Application;
 use crate::boards::*;
-use crate::components::eeprom::{NovellaSelector, NvMemSectionKind};
+use crate::components::eeprom::select;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -51,15 +51,9 @@ async fn main(spawner: Spawner) {
         }
     };
 
-    // NovellaSelector<u32> { section: NvMemSectionKind::HwBootCount},
-
-    let boot_cnt_sel: NovellaSelector<u32> = NovellaSelector {
-        section: NvMemSectionKind::HwBootCount,
-        marker: core::marker::PhantomData,
-    };
-    let boot_cnt = eeprom.lock_read::<NovellaSelector<u32>>(boot_cnt_sel).await;
-    eeprom.lock_write(boot_cnt_sel, boot_cnt + 1).await;
-    let boot_cnt_after = eeprom.lock_read::<NovellaSelector<u32>>(boot_cnt_sel).await;
+    let boot_cnt = eeprom.lock_read(select::HW_BOOT_CNT).await;
+    eeprom.lock_write(select::HW_BOOT_CNT, boot_cnt + 1).await;
+    let boot_cnt_after = eeprom.lock_read(select::HW_BOOT_CNT).await;
     let uptime = eeprom.get_uptime().await;
     let uptime_secs = uptime.as_secs();
 
