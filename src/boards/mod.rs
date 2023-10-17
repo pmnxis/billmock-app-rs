@@ -80,9 +80,9 @@ impl Hardware {
         let mut ret = Stm32Config::default();
         ret.rcc.mux = embassy_stm32::rcc::ClockSrc::PLL(embassy_stm32::rcc::PllConfig {
             source: embassy_stm32::rcc::PllSrc::HSI16,
-            m: embassy_stm32::rcc::Pllm::Div1,
-            n: 8,
-            r: embassy_stm32::rcc::Pllr::Div2,
+            m: embassy_stm32::rcc::Pllm::DIV1,
+            n: embassy_stm32::rcc::Plln::MUL8,
+            r: embassy_stm32::rcc::Pllr::DIV2,
             q: None,
             p: None,
         });

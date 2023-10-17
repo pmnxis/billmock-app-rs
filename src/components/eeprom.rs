@@ -428,26 +428,6 @@ const TOTAL_SLOT_NUM: usize = 96; // should be calculated in compile time
 const TOTAL_SLOT_ARR_LEN: usize =
     (TOTAL_SLOT_NUM + core::mem::size_of::<u8>() - 1) / (core::mem::size_of::<u8>() * 8);
 
-static mut I2C_WAIT_UNTIL: Instant = Instant::from_ticks(0);
-
-fn novella_i2c_polling_check_timeout() -> Result<(), embassy_stm32::i2c::Error> {
-    if Instant::now() < unsafe { I2C_WAIT_UNTIL } {
-        Ok(())
-    } else {
-        Err(embassy_stm32::i2c::Error::Timeout)
-    }
-}
-
-fn novella_i2c_polling_set_timeout(duration: Duration) {
-    unsafe {
-        I2C_WAIT_UNTIL = Instant::now() + duration;
-    }
-}
-
-fn novella_i2c_polling_set_default_timeout() {
-    novella_i2c_polling_set_timeout(WAIT_DURATION_PER_PAGE);
-}
-
 pub struct NovellaModuleControlBlock {
     data: MemStorage,
     controls: [NovellaSectionControlBlock; SECTION_NUM],
@@ -642,15 +622,13 @@ impl Novella {
             let data_address_slice = (raw_addr as EepromAddress).to_be_bytes();
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
-
             // blocking function can detect NACK, but async type does not
             let result = bus
                 .blocking_write_read_timeout(
                     i2c_address,
                     &data_address_slice,
                     rx_buffer,
-                    novella_i2c_polling_check_timeout,
+                    WAIT_DURATION_PER_PAGE,
                 )
                 // .await
                 .map_err(|e| match e {
@@ -799,8 +777,6 @@ impl Novella {
 
             self.clr_write_protect();
 
-            novella_i2c_polling_set_default_timeout();
-
             let result = bus
                 .write(
                     i2c_address,
@@ -836,13 +812,11 @@ impl Novella {
             // #[cfg(i2c_addr_bits_include_msb)]
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
-
             bus.write_read_timeout(
                 i2c_address,
                 addr_buffer,
                 data_buffer,
-                novella_i2c_polling_check_timeout,
+                WAIT_DURATION_PER_PAGE,
             )
             .await
             .map_err(|e| match e {
