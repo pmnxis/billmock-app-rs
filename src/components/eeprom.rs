@@ -148,6 +148,45 @@ pub struct NovellaSelector<T> {
     pub marker: PhantomData<T>, // 0-byte guarantees
 }
 
+#[allow(unused)]
+pub mod select {
+    use super::*;
+    use crate::types::fault_log::FaultLog;
+
+    pub const P1_CARD_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P1CardCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const P2_CARD_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P2CardCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const P1_COIN_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P1CoinCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const P2_COIN_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::P2CoinCnt,
+        marker: core::marker::PhantomData,
+    };
+    pub const FAULT_LOG: NovellaSelector<FaultLog> = NovellaSelector {
+        section: NvMemSectionKind::FaultLog,
+        marker: core::marker::PhantomData,
+    };
+    pub const HW_BOOT_CNT: NovellaSelector<u32> = NovellaSelector {
+        section: NvMemSectionKind::HwBootCount,
+        marker: core::marker::PhantomData,
+    };
+    pub const TERMINAL_ID: NovellaSelector<RawTerminalId> = NovellaSelector {
+        section: NvMemSectionKind::TerminalId,
+        marker: core::marker::PhantomData,
+    };
+    pub const CARD_PORT_BACKUP: NovellaSelector<CardReaderPortBackup> = NovellaSelector {
+        section: NvMemSectionKind::CardPortBackup,
+        marker: core::marker::PhantomData,
+    };
+}
+
 // #[async_trait]
 pub trait NovellaRw {
     type InnerType: Sized;
@@ -389,26 +428,6 @@ const TOTAL_SLOT_NUM: usize = 96; // should be calculated in compile time
 const TOTAL_SLOT_ARR_LEN: usize =
     (TOTAL_SLOT_NUM + core::mem::size_of::<u8>() - 1) / (core::mem::size_of::<u8>() * 8);
 
-static mut I2C_WAIT_UNTIL: Instant = Instant::from_ticks(0);
-
-fn novella_i2c_polling_check_timeout() -> Result<(), embassy_stm32::i2c::Error> {
-    if Instant::now() < unsafe { I2C_WAIT_UNTIL } {
-        Ok(())
-    } else {
-        Err(embassy_stm32::i2c::Error::Timeout)
-    }
-}
-
-fn novella_i2c_polling_set_timeout(duration: Duration) {
-    unsafe {
-        I2C_WAIT_UNTIL = Instant::now() + duration;
-    }
-}
-
-fn novella_i2c_polling_set_default_timeout() {
-    novella_i2c_polling_set_timeout(WAIT_DURATION_PER_PAGE);
-}
-
 pub struct NovellaModuleControlBlock {
     data: MemStorage,
     controls: [NovellaSectionControlBlock; SECTION_NUM],
@@ -603,15 +622,13 @@ impl Novella {
             let data_address_slice = (raw_addr as EepromAddress).to_be_bytes();
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
-
             // blocking function can detect NACK, but async type does not
             let result = bus
                 .blocking_write_read_timeout(
                     i2c_address,
                     &data_address_slice,
                     rx_buffer,
-                    novella_i2c_polling_check_timeout,
+                    WAIT_DURATION_PER_PAGE,
                 )
                 // .await
                 .map_err(|e| match e {
@@ -760,8 +777,6 @@ impl Novella {
 
             self.clr_write_protect();
 
-            novella_i2c_polling_set_default_timeout();
-
             let result = bus
                 .write(
                     i2c_address,
@@ -797,13 +812,11 @@ impl Novella {
             // #[cfg(i2c_addr_bits_include_msb)]
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            novella_i2c_polling_set_default_timeout(); // preinit for blocking_write_read_timeout
-
             bus.write_read_timeout(
                 i2c_address,
                 addr_buffer,
                 data_buffer,
-                novella_i2c_polling_check_timeout,
+                WAIT_DURATION_PER_PAGE,
             )
             .await
             .map_err(|e| match e {
