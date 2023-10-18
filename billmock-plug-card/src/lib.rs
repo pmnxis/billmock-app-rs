@@ -10,6 +10,7 @@
 #[cfg(test)] // for the print out internnal log in test code
 extern crate std;
 
+#[allow(unused)]
 mod common;
 
 use card_terminal_adapter::types::*;
