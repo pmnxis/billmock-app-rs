@@ -50,6 +50,7 @@ impl Application {
         let mut default_serial = Player::Undefined;
         let mut income_backup: Option<PaymentReceive> = None; // for StartButtonDecideSerialToVend
         let mut mutual_inhibit = MutualInhibit::new();
+        let mut did_we_ask = false;
 
         loop {
             // timing flag would be used in future implementation.
@@ -82,14 +83,21 @@ impl Application {
                 defmt::info!("App Mode (0v3) status chagned : {}", appmode_latest);
 
                 default_serial = match appmode_latest {
-                    AppMode0V3::BypassStart | AppMode0V3::StartButtonDecideSerialToVend => {
-                        Player::Undefined
-                    }
-                    AppMode0V3::BypassJam | AppMode0V3::BypassJamButReserved => Player::Player1,
+                    AppMode0V3::BypassStart
+                    | AppMode0V3::StartButtonDecideSerialToVend
+                    | AppMode0V3::DisplayRom => Player::Undefined,
+                    AppMode0V3::BypassJam => Player::Player1,
                 };
 
                 // should be reset
                 income_backup = None;
+
+                if appmode_latest == AppMode0V3::DisplayRom {
+                    hardware
+                        .card_reader
+                        .send(CardTerminalTxCmd::DisplayRom)
+                        .await;
+                }
 
                 appmode = appmode_latest;
             }
@@ -101,6 +109,15 @@ impl Application {
                             .card_reader
                             .send(CardTerminalTxCmd::ResponseDeviceInfo)
                             .await;
+
+                        if !did_we_ask {
+                            did_we_ask = true;
+
+                            hardware
+                                .card_reader
+                                .send(CardTerminalTxCmd::RequestTerminalInfo)
+                                .await;
+                        }
                     }
                     CardTerminalRxCmd::AlertPaymentIncomeArcade(raw_income) => {
                         // judge current application mode and income backup
@@ -171,6 +188,7 @@ impl Application {
                 }
             }
 
+            // Arcade legacy,
             let input_event = if let Ok(raw_input_event) = async_input_event_ch.try_receive() {
                 // let input_bits = async_input_event_ch.get_cache();
                 // defmt::info!("Input cache state changed : {:04X}", input_bits);
@@ -184,7 +202,7 @@ impl Application {
                                     (InputPortKind::StartJam1P, InputPortKind::Start1P),
                                     (InputPortKind::StartJam2P, InputPortKind::Start2P),
                                 ],
-                                AppMode0V3::BypassJam | AppMode0V3::BypassJamButReserved => &[
+                                AppMode0V3::BypassJam | AppMode0V3::DisplayRom => &[
                                     (InputPortKind::StartJam1P, InputPortKind::Jam1P),
                                     (InputPortKind::StartJam2P, InputPortKind::Jam2P),
                                 ],

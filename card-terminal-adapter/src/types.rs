@@ -8,7 +8,7 @@
 use static_assertions::*;
 use zeroable::Zeroable;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, defmt::Format)]
 pub struct RawU24Price(pub [u8; 3]);
 
 impl From<u32> for RawU24Price {
@@ -79,7 +79,7 @@ impl RawU24IncomeArcade {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, defmt::Format)]
 pub struct RawPlayersInhibit {
     pub p1: bool,
     pub p2: bool,

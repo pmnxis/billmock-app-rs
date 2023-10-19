@@ -112,7 +112,7 @@ impl CardTerminalTxGen for KiccEd785Plug {
         &self,
         buffer: &'a mut [u8],
         _git_hash: &'a [u8; GIT_HASH_LEN],
-        _terminal_id: &'a [u8; TID_LEN],
+        _terminal_id: &[u8; TID_LEN],
         _p1_card: u32,
         _p2_card: u32,
         _p1_coin: u32,
@@ -127,7 +127,7 @@ impl CardTerminalTxGen for KiccEd785Plug {
         buffer: &'a mut [u8],
         _model_version: &'a [u8; FW_VER_LEN],
         _serial_number: &'a [u8; DEV_SN_LEN],
-        _terminal_id: &'a [u8; TID_LEN],
+        _terminal_id: &[u8; TID_LEN],
         _hw_boot_cnt: u32,
         _uptime_minutes: u32,
     ) -> &'a [u8] {

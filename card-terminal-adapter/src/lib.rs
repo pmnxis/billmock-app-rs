@@ -45,7 +45,7 @@ pub enum CardTerminalError {
     FailedResponse,
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, defmt::Format)]
 pub enum CardTerminalRxCmd {
     /// Ack signal
     Ack,
@@ -65,7 +65,7 @@ pub enum CardTerminalRxCmd {
     ResponseTerminalInfo,
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, defmt::Format)]
 pub enum CardTerminalTxCmd {
     /// Ack signal
     Ack,
@@ -93,7 +93,7 @@ pub enum CardTerminalTxCmd {
     DisplayWarning(CardTerminalDisplayWarning),
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, defmt::Format)]
 pub enum CardTerminalDisplayWarning {
     RequireArcadeSpecificVersion,
     RequireLatestTerminalVersion,
@@ -178,7 +178,7 @@ pub trait CardTerminalTxGen {
         &self,
         buffer: &'a mut [u8],
         git_hash: &'a [u8; GIT_HASH_LEN],
-        terminal_id: &'a [u8; TID_LEN],
+        terminal_id: &[u8; TID_LEN],
         p1_card: u32,
         p2_card: u32,
         p1_coin: u32,
@@ -192,7 +192,7 @@ pub trait CardTerminalTxGen {
         buffer: &'a mut [u8],
         model_version: &'a [u8; FW_VER_LEN],
         serial_number: &'a [u8; DEV_SN_LEN],
-        terminal_id: &'a [u8; TID_LEN],
+        terminal_id: &[u8; TID_LEN],
         hw_boot_cnt: u32,
         uptime_minutes: u32,
     ) -> &'a [u8];

@@ -165,14 +165,14 @@ impl Hardware {
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.indicators[LED_1_INDEX])));
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.indicators[LED_2_INDEX])));
 
+        unwrap!(spawner.spawn(novella_spawn(&self.eeprom)));
+
         // nothing to do for dipsw for now
         // DIP switch module initialization
 
         // USART CardReaderDevice module initialization
-        unwrap!(spawner.spawn(card_reader_device_spawn(&self.card_reader)));
+        unwrap!(spawner.spawn(card_reader_device_spawn(&self.card_reader, &self.eeprom)));
         serial_device::alert_module_status();
-
-        unwrap!(spawner.spawn(novella_spawn(&self.eeprom)));
     }
 }
 

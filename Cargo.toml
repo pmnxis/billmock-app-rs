@@ -24,7 +24,7 @@ hw_mini_0v4 = ["eeprom"]
 embassy-sync = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["defmt"] }
 embassy-executor = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["nightly", "arch-cortex-m", "executor-thread", "defmt", "integrated-timers"] }
 embassy-futures = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["defmt"] }
-embassy-time = { version = "0.1.3", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-time = { version = "0.1.5", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
 embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["nightly", "defmt", "time-driver-any", "stm32g030c8", "memory-x", "unstable-pac", "exti", "unstable-traits"] } # "unstable-traits" for use InputPin trait for gpio
 embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["nightly"] }
 defmt = "0.3"
