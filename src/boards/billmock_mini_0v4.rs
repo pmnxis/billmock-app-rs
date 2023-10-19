@@ -48,6 +48,7 @@ pub fn hardware_init_mini_0v4(
         let mut ret: UsartConfig = UsartConfig::default();
         ret.baudrate = 115200;
         ret.assume_noise_free = false;
+        ret.detect_previous_overrun = true;
         ret
     };
 

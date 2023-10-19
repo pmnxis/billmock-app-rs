@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 [package]
-name = "serial-arcade-pay-impl"
+name = "billmock-plug-card"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jinwoo Park <pmnxis@gmail.com>"]
@@ -15,7 +15,7 @@ description = "Example implementation of serial arcade payment method for billmo
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serial-arcade-pay = { path = "../serial-arcade-pay" } # Import generic interface for billmock-app-rs
+card-terminal-adapter = { path = "../card-terminal-adapter" } # Import generic interface for billmock-app-rs
 
 defmt = "0.3"
 defmt-test = "0.3.0"

@@ -5,7 +5,7 @@
  */
 
 use bit_field::BitField;
-use serial_arcade_pay::TinyGenericInhibitInfo;
+use card_terminal_adapter::types::RawPlayersInhibit;
 
 use crate::boards::{Board, PLAYER_1_INDEX, PLAYER_2_INDEX};
 use crate::semi_layer::buffered_wait::InputEventKind;
@@ -82,7 +82,7 @@ impl MutualInhibit {
             inhibit_2p.set_level(p2).await;
 
             serial_credit
-                .send_inhibit(TinyGenericInhibitInfo::new(p1, p2, false, false))
+                .send_inhibit(RawPlayersInhibit { p1, p2 })
                 .await;
         }
     }

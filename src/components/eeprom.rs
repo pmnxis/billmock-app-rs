@@ -9,6 +9,7 @@ use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use core::mem::MaybeUninit;
 
+use card_terminal_adapter::types::*;
 use embassy_stm32::crc::Crc;
 use embassy_stm32::gpio::OutputOpenDrain; // this can be replaced to Output
 use embassy_stm32::i2c::I2c;
@@ -16,7 +17,6 @@ use embassy_stm32::peripherals::{self};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::mutex::Mutex;
 use embassy_time::{Duration, Instant, Timer};
-use serial_arcade_pay::backup_types::*;
 
 use crate::types::fault_log::FaultLog;
 
@@ -319,7 +319,7 @@ impl NovellaRw for NovellaSelector<RawTerminalId> {
         let mut cb = mutex.lock().await;
 
         match self.section {
-            NvMemSectionKind::FaultLog => {
+            NvMemSectionKind::TerminalId => {
                 cb.data.raw_terminal = src;
             }
             _ => {
@@ -623,20 +623,19 @@ impl Novella {
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
             // blocking function can detect NACK, but async type does not
-            let result = bus
-                .blocking_write_read_timeout(
-                    i2c_address,
-                    &data_address_slice,
-                    rx_buffer,
-                    WAIT_DURATION_PER_PAGE,
-                )
-                // .await
-                .map_err(|e| match e {
-                    embassy_stm32::i2c::Error::Timeout | embassy_stm32::i2c::Error::Nack => {
-                        NovellaReadError::MissingEeprom
-                    }
-                    _ => NovellaReadError::Unknown,
-                })?;
+            bus.blocking_write_read_timeout(
+                i2c_address,
+                &data_address_slice,
+                rx_buffer,
+                WAIT_DURATION_PER_PAGE,
+            )
+            // .await
+            .map_err(|e| match e {
+                embassy_stm32::i2c::Error::Timeout | embassy_stm32::i2c::Error::Nack => {
+                    NovellaReadError::MissingEeprom
+                }
+                _ => NovellaReadError::Unknown,
+            })?;
 
             if Self::consider_initial_uptime(page_idx) {
                 // Grab time::Duration of slot
@@ -658,7 +657,7 @@ impl Novella {
 
             assert!((max_real_data_in_page <= PAGE_SIZE)); // need compile time assertion
 
-            let size_can_read = max_real_data_in_page.min(real_data_left as usize);
+            let size_can_read = max_real_data_in_page.min(real_data_left);
 
             let slot_mem_start = SECTION_TABLE[sect_idx].real_data_size as usize - real_data_left;
             let dst = &mut slot_mem[slot_mem_start..slot_mem_start + size_can_read];
@@ -750,7 +749,7 @@ impl Novella {
 
             // assert!((max_real_data_in_page > PAGE_SIZE)); // need compile time assertion
 
-            let size_can_write = max_real_data_in_page.min(real_data_left as usize);
+            let size_can_write = max_real_data_in_page.min(real_data_left);
 
             let slot_mem_start = SECTION_TABLE[sect_idx].real_data_size as usize - real_data_left;
             let dst = &mut data_buffer[start_write..start_write + size_can_write];
@@ -854,7 +853,7 @@ impl Novella {
 
             assert!((max_real_data_in_page <= PAGE_SIZE)); // need compile time assertion
 
-            let size_can_read = max_real_data_in_page.min(real_data_left as usize);
+            let size_can_read = max_real_data_in_page.min(real_data_left);
 
             let slot_mem_start = SECTION_TABLE[sect_idx].real_data_size as usize - real_data_left;
             let src = &data_buffer[start_read..start_read + size_can_read];

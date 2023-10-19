@@ -11,6 +11,15 @@ use git2::Repository;
 
 const IGNORE_PATH_DEP_INJ: &str = ".cargo/config.toml";
 
+pub fn format_continuous(v: Vec<u8>) -> String {
+    let mut s = String::new();
+    for a in v {
+        s.push_str(format!("{:02X}", a).as_str());
+    }
+
+    s
+}
+
 fn main() -> Result<(), Error> {
     println!("cargo:rustc-link-arg-bins=--nmagic");
     println!("cargo:rustc-link-arg-bins=-Tlink.x");
@@ -21,13 +30,19 @@ fn main() -> Result<(), Error> {
 
     if let Some(package) = metadata.packages.first() {
         let project_name = &package.name;
-        let project_version = &package.version.to_string();
+        let project_version = package.version.to_string();
 
         println!("cargo:rustc-env=PROJECT_NAME={}", project_name);
-        println!("cargo:rustc-env=PROJECT_VERSION={}", project_version);
+        println!(
+            "cargo:rustc-env=PROJECT_VERSION={}",
+            format_continuous(project_version.into())
+        );
     } else {
         println!("cargo:rustc-env=PROJECT_NAME=unkown");
-        println!("cargo:rustc-env=PROJECT_VERSION=unknown");
+        println!(
+            "cargo:rustc-env=PROJECT_VERSION={}",
+            format_continuous(b"?.?.?".into())
+        );
     }
 
     // Get the Git commit hash
@@ -64,7 +79,7 @@ fn main() -> Result<(), Error> {
     let (dirty_str, short_dirty_str) = if is_dirty {
         ("-dirty".to_owned(), "-d".to_owned())
     } else {
-        ("".to_owned(), "".to_owned())
+        ("".to_owned(), "  ".to_owned())
     };
 
     let output = Command::new("git")
@@ -74,14 +89,16 @@ fn main() -> Result<(), Error> {
     let commit_datetime = String::from_utf8_lossy(&output.stdout);
 
     // Output the version and commit hash to a file
+    // This is u8 array
 
     println!(
         "cargo:rustc-env=GIT_COMMIT_HASH={}{}",
         commit_hash, dirty_str
     );
+
     println!(
-        "cargo:rustc-env=GIT_COMMIT_SHORT_HASH={}{}",
-        commit_short_hash, short_dirty_str
+        "cargo:rustc-env=GIT_COMMIT_SHORT_HASH={}",
+        format_continuous(format!("{}{}", commit_short_hash, short_dirty_str).into())
     );
     println!("cargo:rustc-env=GIT_COMMIT_DATETIME={}", commit_datetime);
 

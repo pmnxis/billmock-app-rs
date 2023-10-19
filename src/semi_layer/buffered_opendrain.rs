@@ -604,6 +604,14 @@ impl BufferedOpenDrain {
             .await
     }
 
+    /// Simply order one shot high from shared timing
+    /// gain*(high+low) + alpha)
+    pub async fn one_shot_high_shared_alpha(&self, count: u8, alpha: u16) {
+        let timing = self.shared_timing.get();
+        self.one_shot_high_mul(count, timing.high_ms, timing.low_ms, alpha)
+            .await
+    }
+
     pub fn get_shared_timing(&self) -> ToggleTiming {
         self.shared_timing.get()
     }

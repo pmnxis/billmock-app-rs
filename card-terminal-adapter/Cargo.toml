@@ -1,17 +1,14 @@
-# SPDX-FileCopyrightText: © 2023 Jinwoo Park (pmnxis@gmail.com)
-#
-# SPDX-License-Identifier: CC0-1.0
-
 [package]
-name = "serial-arcade-pay"
+name = "card-terminal-adapter"
 version = "0.1.0"
 edition = "2021"
 authors = ["Jinwoo Park <pmnxis@gmail.com>"]
 license = "MIT OR Apache-2.0"
-description = "Common arcade serial type payment method interface for billmock-app-rs"
+description = "Card terminal interface adapte for billmock-app-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-defmt = "0.3"
 static_assertions = "1.1.0"
+defmt = "0.3"
+zeroable = "0.2.0"

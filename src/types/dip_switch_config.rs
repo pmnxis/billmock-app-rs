@@ -246,7 +246,7 @@ pub enum AppMode0V3 {
     /// `11` : BypassJamButReserved
     /// Bypass JAM (swapped logically). JAM signal bypass to host(game pcb) side output.
     /// This configuration is reserved for future usage.
-    BypassJamButReserved = 3,
+    DisplayRom = 3,
 }
 
 impl AppMode0V3 {
@@ -263,8 +263,8 @@ impl defmt::Format for AppMode0V3 {
                 defmt::write!(fmt, "StartButtonDecideSerialToVend")
             }
             AppMode0V3::BypassJam => defmt::write!(fmt, "BypassJam"),
-            AppMode0V3::BypassJamButReserved => {
-                defmt::write!(fmt, "BypassJamButReserved")
+            AppMode0V3::DisplayRom => {
+                defmt::write!(fmt, "DisplayRom")
             }
         }
     }

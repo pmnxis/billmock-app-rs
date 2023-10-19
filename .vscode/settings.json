@@ -23,7 +23,7 @@
   "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
   "rust-analyzer.linkedProjects": [
     "Cargo.toml",
-    "serial-arcade-pay/Cargo.toml",
-    "serial-arcade-example/Cargo.toml",
+    "billmock-plug-card/Cargo.toml",
+    "card-terminal-adapter/Cargo.toml",
   ],
 }

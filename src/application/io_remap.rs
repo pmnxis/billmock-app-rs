@@ -6,6 +6,8 @@
 
 use super::io_bypass::io_bypass;
 use crate::boards::*;
+use crate::components::eeprom;
+use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::input_port::{InputEvent, InputPortKind};
 use crate::types::player::Player;
 
@@ -127,6 +129,42 @@ impl InputEvent {
     }
 
     pub async fn apply_output(&self, board: &'static Board, override_druation_force: bool) -> Self {
+        match (self.port, self.event) {
+            (InputPortKind::Vend1P, InputEventKind::LongPressed(_)) => {
+                let count = board
+                    .hardware
+                    .eeprom
+                    .lock_read(eeprom::select::P1_COIN_CNT)
+                    .await;
+                let new_count = count + 1;
+
+                board
+                    .hardware
+                    .eeprom
+                    .lock_write(eeprom::select::P1_COIN_CNT, new_count)
+                    .await;
+
+                defmt::info!("P1_COIN_CNT, {} -> {}", count, new_count);
+            }
+            (InputPortKind::Vend2P, InputEventKind::LongPressed(_)) => {
+                let count = board
+                    .hardware
+                    .eeprom
+                    .lock_read(eeprom::select::P2_COIN_CNT)
+                    .await;
+                let new_count = count + 1;
+
+                board
+                    .hardware
+                    .eeprom
+                    .lock_write(eeprom::select::P2_COIN_CNT, new_count)
+                    .await;
+
+                defmt::info!("P2_COIN_CNT, {} -> {}", count, new_count);
+            }
+            _ => {}
+        }
+
         if self.port != InputPortKind::Nothing {
             io_bypass(board, self, override_druation_force).await;
         }
