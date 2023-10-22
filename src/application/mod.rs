@@ -97,6 +97,11 @@ impl Application {
                         .card_reader
                         .send(CardTerminalTxCmd::DisplayRom)
                         .await;
+                } else if appmode == AppMode0V3::DisplayRom {
+                    hardware
+                        .card_reader
+                        .send(CardTerminalTxCmd::DisplayHwInfo)
+                        .await;
                 }
 
                 appmode = appmode_latest;

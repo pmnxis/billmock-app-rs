@@ -136,11 +136,11 @@ pub trait CardTerminalTxGen {
 
     /// Generate ResponseDeviceInfo signal to send
     /// Response for requesting device information (RequestDeviceInfo)
-    fn response_device_info<'a>(
+    fn response_device_info<'a, 'b>(
         &self,
         buffer: &'a mut [u8],
-        model_version: &'a [u8; FW_VER_LEN],
-        serial_number: &'a [u8; DEV_SN_LEN],
+        model_version: &'b [u8; FW_VER_LEN],
+        serial_number: &'b [u8; DEV_SN_LEN],
     ) -> &'a [u8];
 
     /// Generate PushCoinPaperAcceptorIncome signal to send
@@ -187,11 +187,11 @@ pub trait CardTerminalTxGen {
 
     /// Generate DisplayHwInfo signal to send
     /// Display hardware information, boot count, uptime and etc.
-    fn display_hw_info<'a>(
+    fn display_hw_info<'a, 'b>(
         &self,
         buffer: &'a mut [u8],
-        model_version: &'a [u8; FW_VER_LEN],
-        serial_number: &'a [u8; DEV_SN_LEN],
+        model_version: &'b [u8; FW_VER_LEN],
+        serial_number: &'b [u8; DEV_SN_LEN],
         terminal_id: &[u8; TID_LEN],
         hw_boot_cnt: u32,
         uptime_minutes: u32,
