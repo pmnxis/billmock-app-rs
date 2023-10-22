@@ -23,7 +23,8 @@
   "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
   "rust-analyzer.linkedProjects": [
     "Cargo.toml",
+    "billmock-mptool/Cargo.toml",
     "billmock-plug-card/Cargo.toml",
-    "card-terminal-adapter/Cargo.toml",
+    "card-terminal-adapter/Cargo.toml"
   ],
 }

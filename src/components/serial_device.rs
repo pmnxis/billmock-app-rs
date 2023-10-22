@@ -76,7 +76,7 @@ impl CardReaderDevice {
                         CardTerminalTxCmd::ResponseDeviceInfo => plug.response_device_info(
                             &mut tx_buf,
                             &const_str::VERSION_STR,
-                            &const_str::SERIAL_NUMBER_WHEN_UNKNOWN, // todo! - get last MCU flash page for getting serial number
+                            const_str::get_serial_number(),
                         ),
                         CardTerminalTxCmd::PushCoinPaperAcceptorIncome(x) => {
                             plug.alert_coin_paper_acceptor_income(&mut tx_buf, x)
