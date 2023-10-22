@@ -223,6 +223,7 @@ impl Board {
         defmt::println!("{}", const_str::PRINT_BAR);
         #[rustfmt::skip]
         defmt::println!("Firmware Ver : {} {=[u8]:a}", const_str::PROJECT_NAME, const_str::VERSION_STR);
+        defmt::println!("SerialNumber : {=[u8]:a}", *const_str::get_serial_number());
         defmt::println!("Git Hash     : {}", const_str::COMMIT_HASH);
         #[rustfmt::skip]
         defmt::println!("Git Datetime : {} | {=[u8]:a}", const_str::GIT_COMMIT_DATETIME, const_str::COMMIT_SHORT);
