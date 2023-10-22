@@ -110,8 +110,20 @@ impl CardReaderDevice {
                             )
                         }
                         CardTerminalTxCmd::DisplayHwInfo => {
-                            // display_rom
-                            unimplemented!()
+                            let hw_boot_cnt = novella.lock_read(eeprom::select::HW_BOOT_CNT).await;
+                            let tid = novella.lock_read(eeprom::select::TERMINAL_ID).await.normal;
+                            let uptime_minutes = (novella.get_uptime().await.as_secs() / 60)
+                                .min(u32::MAX as u64)
+                                as u32;
+
+                            plug.display_hw_info(
+                                &mut tx_buf,
+                                &const_str::VERSION_STR,
+                                const_str::get_serial_number(),
+                                &tid,
+                                hw_boot_cnt,
+                                uptime_minutes,
+                            )
                         }
                         CardTerminalTxCmd::DisplayWarning(x) => {
                             plug.display_warning(&mut tx_buf, x)

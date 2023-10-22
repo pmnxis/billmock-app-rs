@@ -61,11 +61,11 @@ impl CardTerminalTxGen for KiccEd785Plug {
         &common::RAW_DATA_NACK
     }
 
-    fn response_device_info<'a>(
+    fn response_device_info<'a, 'b>(
         &self,
         buffer: &'a mut [u8],
-        _model_version: &'a [u8; FW_VER_LEN],
-        _serial_number: &'a [u8; DEV_SN_LEN],
+        _model_version: &'b [u8; FW_VER_LEN],
+        _serial_number: &'b [u8; DEV_SN_LEN],
     ) -> &'a [u8] {
         // implement me for actual usage
         &buffer[0..0]
@@ -122,11 +122,11 @@ impl CardTerminalTxGen for KiccEd785Plug {
         &buffer[0..0]
     }
 
-    fn display_hw_info<'a>(
+    fn display_hw_info<'a, 'b>(
         &self,
         buffer: &'a mut [u8],
-        _model_version: &'a [u8; FW_VER_LEN],
-        _serial_number: &'a [u8; DEV_SN_LEN],
+        _model_version: &'b [u8; FW_VER_LEN],
+        _serial_number: &'b [u8; DEV_SN_LEN],
         _terminal_id: &[u8; TID_LEN],
         _hw_boot_cnt: u32,
         _uptime_minutes: u32,
