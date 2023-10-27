@@ -21,12 +21,12 @@ hw_0v4 = ["eeprom"]
 hw_mini_0v4 = ["eeprom"]
 
 [dependencies]
-embassy-sync = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["defmt"] }
-embassy-executor = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["nightly", "arch-cortex-m", "executor-thread", "defmt", "integrated-timers"] }
-embassy-futures = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["defmt"] }
-embassy-time = { version = "0.1.5", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
-embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["nightly", "defmt", "time-driver-any", "stm32g030c8", "memory-x", "unstable-pac", "exti", "unstable-traits"] } # "unstable-traits" for use InputPin trait for gpio
-embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "d94b9fe6fb6adee82c1427e72450f77a0d0973c3", features = ["nightly"] }
+embassy-sync = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "b6fc682117a41e8e63a9632e06da5a17f46d9ab0", features = ["defmt"] }
+embassy-executor = { version = "0.3.0", git = "https://github.com/embassy-rs/embassy.git", rev = "b6fc682117a41e8e63a9632e06da5a17f46d9ab0", features = ["nightly", "arch-cortex-m", "executor-thread", "defmt", "integrated-timers"] }
+embassy-futures = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "b6fc682117a41e8e63a9632e06da5a17f46d9ab0", features = ["defmt"] }
+embassy-time = { version = "0.1.5", git = "https://github.com/embassy-rs/embassy.git", rev = "b6fc682117a41e8e63a9632e06da5a17f46d9ab0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
+embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "b6fc682117a41e8e63a9632e06da5a17f46d9ab0", features = ["nightly", "defmt", "time-driver-any", "stm32g030c8", "memory-x", "unstable-pac", "exti", "unstable-traits"] } # "unstable-traits" for use InputPin trait for gpio
+embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy.git", rev = "b6fc682117a41e8e63a9632e06da5a17f46d9ab0", features = ["nightly"] }
 defmt = "0.3"
 defmt-rtt = "0.4"
 
@@ -40,6 +40,8 @@ bit_field = "0.10"
 nonmax = { version = "0.5.3", default-features = false, features = [] } # to use common NonMax
 static_assertions = "1.1.0"
 env_to_array = { version = "0.3.1", features = ["hex"] }
+zeroable = "0.2.0"
+const-zero = "0.1.1"
 
 # Application specific library
 

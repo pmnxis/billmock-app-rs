@@ -26,14 +26,12 @@ use crate::application::Application;
 use crate::boards::*;
 use crate::components::eeprom::select;
 
-#[embassy_executor::main]
-async fn main(spawner: Spawner) {
-    // Initialize necessary BSP
-    let board: &'static mut Board = make_static!(Board::init());
-    let eeprom = &board.hardware.eeprom;
+async fn initial_eeprom(eeprom: &crate::components::eeprom::Novella) {
+    // uncomment me when you need reset eeprom.
+    // eeprom.factory_reset();
 
-    // Eeprom Novella module init
-    match eeprom.init().await {
+    let eeprom_result = eeprom.init();
+    match eeprom_result {
         Ok(crate::components::eeprom::NovellaInitOk::FirstBoot) => {
             defmt::info!("Welcom first boot");
         }
@@ -66,6 +64,17 @@ async fn main(spawner: Spawner) {
         (uptime_secs / 60) % 60,
         uptime_secs % 60
     );
+}
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    // Initialize necessary BSP
+    let board: &'static mut Board = make_static!(Board::init());
+
+    // init hardware eeprom
+
+    // Count up boot count and show uptime though DAP.
+    initial_eeprom(&board.hardware.eeprom).await;
 
     // heuristic wait for stablize external electronic status
     Timer::after(Duration::from_millis(1000)).await;
