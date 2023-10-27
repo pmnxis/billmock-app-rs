@@ -74,7 +74,7 @@ impl Hardware {
         // STM32G030 maximum CPU clock is 64Mhz.
         let mut ret = Stm32Config::default();
         ret.rcc.mux = embassy_stm32::rcc::ClockSrc::PLL(embassy_stm32::rcc::PllConfig {
-            source: embassy_stm32::rcc::PllSrc::HSI16,
+            source: embassy_stm32::rcc::PllSrc::HSI,
             m: embassy_stm32::rcc::Pllm::DIV1,
             n: embassy_stm32::rcc::Plln::MUL8,
             r: embassy_stm32::rcc::Pllr::DIV2,
