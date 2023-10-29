@@ -150,10 +150,18 @@ impl BufferedWait {
     }
 }
 
-// in HW v0.2 pool usage would be 6.
-// PCB use 6 EXTI
+// in HW v0.4 pool usage would be 6.
 // single task pool consume 88 bytes
+#[cfg(not(feature = "svc_button"))]
 #[embassy_executor::task(pool_size = 6)]
+pub async fn buffered_wait_spawn(instance: &'static BufferedWait) {
+    instance.run().await
+}
+
+// in HW v0.5 pool usage would be 7. (+ SVC_Button)
+// single task pool consume 88 bytes
+#[cfg(feature = "svc_button")]
+#[embassy_executor::task(pool_size = 7)]
 pub async fn buffered_wait_spawn(instance: &'static BufferedWait) {
     instance.run().await
 }

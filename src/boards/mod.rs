@@ -17,6 +17,8 @@ use self::billmock_0v3::hardware_init_0v3;
 use self::billmock_0v4::hardware_init_0v4;
 #[cfg(feature = "hw_mini_0v4")]
 use self::billmock_mini_0v4::hardware_init_mini_0v4;
+#[cfg(feature = "hw_mini_0v5")]
+use self::billmock_mini_0v5::hardware_init_mini_0v5;
 use crate::components::dip_switch::DipSwitch;
 use crate::components::eeprom::novella_spawn;
 use crate::components::eeprom::Novella;
@@ -24,6 +26,8 @@ use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::{self, card_reader_device_spawn, CardReaderDevice};
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
+#[cfg(feature = "svc_button")]
+use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait};
 use crate::semi_layer::buffered_wait_receiver::BufferedWaitReceiver;
 use crate::semi_layer::timing::{SharedToggleTiming, ToggleTiming};
 use crate::types::input_port::InputPortKind;
@@ -46,6 +50,8 @@ mod billmock_0v3;
 mod billmock_0v4;
 #[cfg(feature = "hw_mini_0v4")]
 mod billmock_mini_0v4;
+#[cfg(feature = "hw_mini_0v5")]
+mod billmock_mini_0v5;
 
 pub struct Hardware {
     /// Bill paper and coin acceptor input device for 1 and 2 player sides
@@ -65,6 +71,10 @@ pub struct Hardware {
 
     /// Eeprom manager, powered by Novella
     pub eeprom: Novella,
+
+    #[cfg(feature = "svc_button")]
+    /// SVC button (tactile switch) for engineer or foreman
+    pub svc_button: BufferedWait,
 }
 
 impl Hardware {
@@ -113,7 +123,8 @@ impl Hardware {
             feature = "hw_0v2",
             not(feature = "hw_0v3"),
             not(feature = "hw_0v4"),
-            not(feature = "hw_mini_0v4")
+            not(feature = "hw_mini_0v4"),
+            not(feature = "hw_mini_0v5")
         ))]
         let ret = hardware_init_0v2(peripherals, shared_resource);
 
@@ -122,7 +133,8 @@ impl Hardware {
                 feature = "hw_0v3",
                 not(feature = "hw_0v2"),
                 not(feature = "hw_0v4"),
-                not(feature = "hw_mini_0v4")
+                not(feature = "hw_mini_0v4"),
+                not(feature = "hw_mini_0v5")
             ),
             feature = "billmock_default"
         ))]
@@ -132,7 +144,8 @@ impl Hardware {
             feature = "hw_0v4",
             not(feature = "hw_0v2"),
             not(feature = "hw_0v3"),
-            not(feature = "hw_mini_0v4")
+            not(feature = "hw_mini_0v4"),
+            not(feature = "hw_mini_0v5")
         ))]
         let ret = hardware_init_0v4(peripherals, shared_resource);
 
@@ -140,9 +153,19 @@ impl Hardware {
             feature = "hw_mini_0v4",
             not(feature = "hw_0v2"),
             not(feature = "hw_0v3"),
-            not(feature = "hw_0v4")
+            not(feature = "hw_0v4"),
+            not(feature = "hw_mini_0v5")
         ))]
         let ret = hardware_init_mini_0v4(peripherals, shared_resource);
+
+        #[cfg(all(
+            feature = "hw_mini_0v5",
+            not(feature = "hw_0v2"),
+            not(feature = "hw_0v3"),
+            not(feature = "hw_0v4"),
+            not(feature = "hw_mini_0v4")
+        ))]
+        let ret = hardware_init_mini_0v5(peripherals, shared_resource);
 
         ret
     }
@@ -164,6 +187,10 @@ impl Hardware {
         // LED indicators inside of PCB initialization. for debug / indication.
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.indicators[LED_1_INDEX])));
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.indicators[LED_2_INDEX])));
+
+        #[cfg(feature = "svc_button")]
+        // SVC button (tact button) insde of PCB. for engineer and foreman
+        unwrap!(spawner.spawn(buffered_wait_spawn(&self.svc_button)));
 
         unwrap!(spawner.spawn(novella_spawn(&self.eeprom)));
 

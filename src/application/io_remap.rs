@@ -99,6 +99,7 @@ impl InputEvent {
                 InputPortKind::StartJam2P => InputPortKind::StartJam1P,
                 InputPortKind::Vend2P => InputPortKind::Vend1P,
                 InputPortKind::Vend1P => InputPortKind::Vend2P,
+                InputPortKind::SvcButton => InputPortKind::SvcButton,
                 InputPortKind::Nothing => InputPortKind::Nothing,
             },
             event: self.event,

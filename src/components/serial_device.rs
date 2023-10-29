@@ -40,6 +40,19 @@ pub struct CardReaderDevice {
 
 type StackedRingbufferRxIndex = usize;
 
+const ALT_TID: [u8; TID_LEN] = *b"  loading ";
+async fn get_tid_alt(novella: &Novella) -> [u8; TID_LEN] {
+    let tid = novella.lock_read(eeprom::select::TERMINAL_ID).await.normal;
+
+    for a in tid {
+        if !(b' ' <= a && a <= b'z') {
+            return ALT_TID;
+        }
+    }
+
+    tid
+}
+
 impl CardReaderDevice {
     pub const fn new(
         tx: UartTx<'static, USART2, DMA1_CH2>,
@@ -97,7 +110,7 @@ impl CardReaderDevice {
                             let p2_card = novella.lock_read(eeprom::select::P2_CARD_CNT).await;
                             let p1_coin = novella.lock_read(eeprom::select::P1_COIN_CNT).await;
                             let p2_coin = novella.lock_read(eeprom::select::P2_COIN_CNT).await;
-                            let tid = novella.lock_read(eeprom::select::TERMINAL_ID).await.normal;
+                            let tid = get_tid_alt(novella).await;
 
                             plug.display_rom(
                                 &mut tx_buf,
@@ -111,10 +124,9 @@ impl CardReaderDevice {
                         }
                         CardTerminalTxCmd::DisplayHwInfo => {
                             let hw_boot_cnt = novella.lock_read(eeprom::select::HW_BOOT_CNT).await;
-                            let tid = novella.lock_read(eeprom::select::TERMINAL_ID).await.normal;
-                            let uptime_minutes = (novella.get_uptime().await.as_secs() / 60)
-                                .min(u32::MAX as u64)
-                                as u32;
+                            let tid = get_tid_alt(novella).await;
+                            let uptime_minutes =
+                                (novella.get_uptime().as_secs() / 60).min(u32::MAX as u64) as u32;
 
                             plug.display_hw_info(
                                 &mut tx_buf,

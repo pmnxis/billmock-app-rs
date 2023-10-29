@@ -50,7 +50,7 @@ impl Application {
         let mut default_serial = Player::Undefined;
         let mut income_backup: Option<PaymentReceive> = None; // for StartButtonDecideSerialToVend
         let mut mutual_inhibit = MutualInhibit::new();
-        let mut did_we_ask = false;
+        let mut did_we_ask: u8 = 0;
 
         loop {
             // timing flag would be used in future implementation.
@@ -115,14 +115,14 @@ impl Application {
                             .send(CardTerminalTxCmd::ResponseDeviceInfo)
                             .await;
 
-                        if !did_we_ask {
-                            did_we_ask = true;
-
+                        if (did_we_ask & 0b111) == 0 {
                             hardware
                                 .card_reader
                                 .send(CardTerminalTxCmd::RequestTerminalInfo)
                                 .await;
                         }
+
+                        did_we_ask += 1;
                     }
                     CardTerminalRxCmd::AlertPaymentIncomeArcade(raw_income) => {
                         // judge current application mode and income backup
@@ -199,6 +199,30 @@ impl Application {
                 // defmt::info!("Input cache state changed : {:04X}", input_bits);
 
                 match InputEvent::try_from(raw_input_event) {
+                    #[cfg(feature = "svc_button")]
+                    Ok(InputEvent {
+                        port: InputPortKind::SvcButton,
+                        event: InputEventKind::LongPressed(t),
+                    }) => {
+                        if (2 < t) && (t < 120) {
+                            hardware
+                                .card_reader
+                                .send(CardTerminalTxCmd::DisplayRom)
+                                .await;
+                        } else {
+                            hardware
+                                .card_reader
+                                .send(CardTerminalTxCmd::DisplayHwInfo)
+                                .await;
+                        }
+
+                        yield_now().await;
+                        // Some(InputEvent {
+                        //     port: InputPortKind::SvcButton,
+                        //     event: InputEventKind::LongPressed(t),
+                        // })
+                        None
+                    }
                     Ok(y) => {
                         let ret = y
                             .replace_arr(match appmode {
