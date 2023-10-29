@@ -199,6 +199,30 @@ impl Application {
                 // defmt::info!("Input cache state changed : {:04X}", input_bits);
 
                 match InputEvent::try_from(raw_input_event) {
+                    #[cfg(feature = "svc_button")]
+                    Ok(InputEvent {
+                        port: InputPortKind::SvcButton,
+                        event: InputEventKind::LongPressed(t),
+                    }) => {
+                        if (2 < t) && (t < 120) {
+                            hardware
+                                .card_reader
+                                .send(CardTerminalTxCmd::DisplayRom)
+                                .await;
+                        } else {
+                            hardware
+                                .card_reader
+                                .send(CardTerminalTxCmd::DisplayHwInfo)
+                                .await;
+                        }
+
+                        yield_now().await;
+                        // Some(InputEvent {
+                        //     port: InputPortKind::SvcButton,
+                        //     event: InputEventKind::LongPressed(t),
+                        // })
+                        None
+                    }
                     Ok(y) => {
                         let ret = y
                             .replace_arr(match appmode {
