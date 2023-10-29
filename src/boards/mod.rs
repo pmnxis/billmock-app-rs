@@ -26,6 +26,8 @@ use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::{self, card_reader_device_spawn, CardReaderDevice};
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::{buffered_opendrain_spawn, BufferedOpenDrain};
+#[cfg(feature = "svc_button")]
+use crate::semi_layer::buffered_wait::{buffered_wait_spawn, BufferedWait};
 use crate::semi_layer::buffered_wait_receiver::BufferedWaitReceiver;
 use crate::semi_layer::timing::{SharedToggleTiming, ToggleTiming};
 use crate::types::input_port::InputPortKind;
@@ -69,6 +71,10 @@ pub struct Hardware {
 
     /// Eeprom manager, powered by Novella
     pub eeprom: Novella,
+
+    #[cfg(feature = "svc_button")]
+    /// SVC button (tactile switch) for engineer or foreman
+    pub svc_button: BufferedWait,
 }
 
 impl Hardware {
@@ -181,6 +187,10 @@ impl Hardware {
         // LED indicators inside of PCB initialization. for debug / indication.
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.indicators[LED_1_INDEX])));
         unwrap!(spawner.spawn(buffered_opendrain_spawn(&self.indicators[LED_2_INDEX])));
+
+        #[cfg(feature = "svc_button")]
+        // SVC button (tact button) insde of PCB. for engineer and foreman
+        unwrap!(spawner.spawn(buffered_wait_spawn(&self.svc_button)));
 
         unwrap!(spawner.spawn(novella_spawn(&self.eeprom)));
 

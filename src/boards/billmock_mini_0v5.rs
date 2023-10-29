@@ -26,6 +26,8 @@ use crate::components::host_side_bill::HostSideBill;
 use crate::components::serial_device::CardReaderDevice;
 use crate::components::vend_side_bill::VendSideBill;
 use crate::semi_layer::buffered_opendrain::BufferedOpenDrain;
+#[cfg(feature = "svc_button")]
+use crate::semi_layer::buffered_wait::BufferedWait;
 use crate::types::buffered_opendrain_kind::BufferedOpenDrainKind;
 use crate::types::player::Player;
 
@@ -86,6 +88,10 @@ pub fn hardware_init_mini_0v5(
     let crc = Crc::new(p.CRC, crc_config);
 
     let async_input_event_ch = &shared_resource.async_input_event_ch.channel;
+
+    #[cfg(feature = "svc_button")]
+    let (svc_p, svc_str) =
+        crate::types::input_port::InputPortKind::SvcButton.to_raw_and_const_str(Player::Undefined);
 
     Hardware {
         vend_sides: [
@@ -171,6 +177,16 @@ pub fn hardware_init_mini_0v5(
             i2c,
             crc,
             embassy_stm32::gpio::OutputOpenDrain::new(p.PF0, Level::Low, Speed::Low, Pull::None),
+        ),
+        #[cfg(feature = "svc_button")]
+        svc_button: BufferedWait::new(
+            ExtiInput::new(
+                Input::new(p.PA8, Pull::Up).degrade(), // SW_SERVICE, need pull-up
+                p.EXTI8.degrade(),                     // EXTI8
+            ),
+            async_input_event_ch,
+            svc_p,
+            svc_str,
         ),
     }
 }

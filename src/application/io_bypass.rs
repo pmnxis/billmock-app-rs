@@ -14,11 +14,15 @@ use crate::types::input_port::{InputEvent, InputPortKind};
 pub async fn io_bypass(board: &'static Board, event: &InputEvent, override_druation_force: bool) {
     let output = match board.correspond_output(&event.port) {
         Ok(x) => x,
+        #[cfg(feature = "svc_button")]
+        Err(BoardCorrespondOutputMatchError {
+            origin: InputPortKind::SvcButton,
+        }) => {
+            // Svc Button is not output type
+            return;
+        }
         Err(e) => {
-            error!(
-                "io_bypass some wrong enum value income : 0x{:02X}",
-                e.origin
-            );
+            error!("io_bypass some wrong enum value income : {}", e.origin);
             return;
         }
     };

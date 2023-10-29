@@ -24,12 +24,13 @@ pub enum InputPortKind {
     StartJam2P = 7,
     Inhibit1P = 8,
     Inhibit2P = 9,
+    SvcButton = 10,
     // Ignored signal by filter function
-    Nothing = 10,
+    Nothing = 11,
 }
 
 #[cfg(debug_assertions)]
-const INPUT_PORT_KIND_STRS: [&str; 11] = [
+const INPUT_PORT_KIND_STRS: [&str; 12] = [
     "VendIn_1P-Start  ",
     "VendIn_2P-Start  ",
     "VendIn_1P-Vend   ",
@@ -40,12 +41,13 @@ const INPUT_PORT_KIND_STRS: [&str; 11] = [
     "VendIn_2P-STR/JAM",
     "HostIn_1P-Inhibit",
     "HostIn_2P-Inhibit",
+    "SVC_Button       ",
     "Nothing",
 ];
 
 #[cfg(not(debug_assertions))]
 #[rustfmt::skip]
-const INPUT_PORT_KIND_STRS: [&str; 11] = [
+const INPUT_PORT_KIND_STRS: [&str; 12] = [
     "P1V-iSTR",
     "P2V-iSTR",
     "P1V-iVND",
@@ -56,6 +58,7 @@ const INPUT_PORT_KIND_STRS: [&str; 11] = [
     "P2V-iS/J",
     "P1H-iINH",
     "P2H-iINH",
+    "iSVC_BT ",
     "iNothing",
 ];
 
@@ -96,7 +99,7 @@ impl InputPortKind {
 
         // PartialEq doesn't support const boundary
         // if Player::Undefined == player {
-        if Player::Undefined as u8 == player as u8 {
+        if (Player::Undefined as u8 == player as u8) || (idx == Self::SvcButton as u8) {
             let ret: RawInputPortKind = self as u8;
             (ret, INPUT_PORT_KIND_STRS[ret as usize])
         } else if Self::Nothing as u8 != idx {
