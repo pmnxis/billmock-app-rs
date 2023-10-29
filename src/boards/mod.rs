@@ -17,6 +17,8 @@ use self::billmock_0v3::hardware_init_0v3;
 use self::billmock_0v4::hardware_init_0v4;
 #[cfg(feature = "hw_mini_0v4")]
 use self::billmock_mini_0v4::hardware_init_mini_0v4;
+#[cfg(feature = "hw_mini_0v5")]
+use self::billmock_mini_0v5::hardware_init_mini_0v5;
 use crate::components::dip_switch::DipSwitch;
 use crate::components::eeprom::novella_spawn;
 use crate::components::eeprom::Novella;
@@ -46,6 +48,8 @@ mod billmock_0v3;
 mod billmock_0v4;
 #[cfg(feature = "hw_mini_0v4")]
 mod billmock_mini_0v4;
+#[cfg(feature = "hw_mini_0v5")]
+mod billmock_mini_0v5;
 
 pub struct Hardware {
     /// Bill paper and coin acceptor input device for 1 and 2 player sides
@@ -113,7 +117,8 @@ impl Hardware {
             feature = "hw_0v2",
             not(feature = "hw_0v3"),
             not(feature = "hw_0v4"),
-            not(feature = "hw_mini_0v4")
+            not(feature = "hw_mini_0v4"),
+            not(feature = "hw_mini_0v5")
         ))]
         let ret = hardware_init_0v2(peripherals, shared_resource);
 
@@ -122,7 +127,8 @@ impl Hardware {
                 feature = "hw_0v3",
                 not(feature = "hw_0v2"),
                 not(feature = "hw_0v4"),
-                not(feature = "hw_mini_0v4")
+                not(feature = "hw_mini_0v4"),
+                not(feature = "hw_mini_0v5")
             ),
             feature = "billmock_default"
         ))]
@@ -132,7 +138,8 @@ impl Hardware {
             feature = "hw_0v4",
             not(feature = "hw_0v2"),
             not(feature = "hw_0v3"),
-            not(feature = "hw_mini_0v4")
+            not(feature = "hw_mini_0v4"),
+            not(feature = "hw_mini_0v5")
         ))]
         let ret = hardware_init_0v4(peripherals, shared_resource);
 
@@ -140,9 +147,19 @@ impl Hardware {
             feature = "hw_mini_0v4",
             not(feature = "hw_0v2"),
             not(feature = "hw_0v3"),
-            not(feature = "hw_0v4")
+            not(feature = "hw_0v4"),
+            not(feature = "hw_mini_0v5")
         ))]
         let ret = hardware_init_mini_0v4(peripherals, shared_resource);
+
+        #[cfg(all(
+            feature = "hw_mini_0v5",
+            not(feature = "hw_0v2"),
+            not(feature = "hw_0v3"),
+            not(feature = "hw_0v4"),
+            not(feature = "hw_mini_0v4")
+        ))]
+        let ret = hardware_init_mini_0v5(peripherals, shared_resource);
 
         ret
     }
