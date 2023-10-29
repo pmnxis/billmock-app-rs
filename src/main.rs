@@ -52,7 +52,7 @@ async fn initial_eeprom(eeprom: &crate::components::eeprom::Novella) {
     let boot_cnt = eeprom.lock_read(select::HW_BOOT_CNT).await;
     eeprom.lock_write(select::HW_BOOT_CNT, boot_cnt + 1).await;
     let boot_cnt_after = eeprom.lock_read(select::HW_BOOT_CNT).await;
-    let uptime = eeprom.get_uptime().await;
+    let uptime = eeprom.get_uptime();
     let uptime_secs = uptime.as_secs();
 
     defmt::info!("Boot Count : {} -> {}", boot_cnt, boot_cnt_after,);
@@ -72,7 +72,6 @@ async fn main(spawner: Spawner) {
     let board: &'static mut Board = make_static!(Board::init());
 
     // init hardware eeprom
-
     // Count up boot count and show uptime though DAP.
     initial_eeprom(&board.hardware.eeprom).await;
 

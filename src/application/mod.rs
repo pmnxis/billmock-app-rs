@@ -50,7 +50,7 @@ impl Application {
         let mut default_serial = Player::Undefined;
         let mut income_backup: Option<PaymentReceive> = None; // for StartButtonDecideSerialToVend
         let mut mutual_inhibit = MutualInhibit::new();
-        let mut did_we_ask = false;
+        let mut did_we_ask: u8 = 0;
 
         loop {
             // timing flag would be used in future implementation.
@@ -115,14 +115,14 @@ impl Application {
                             .send(CardTerminalTxCmd::ResponseDeviceInfo)
                             .await;
 
-                        if !did_we_ask {
-                            did_we_ask = true;
-
+                        if (did_we_ask & 0b111) == 0 {
                             hardware
                                 .card_reader
                                 .send(CardTerminalTxCmd::RequestTerminalInfo)
                                 .await;
                         }
+
+                        did_we_ask += 1;
                     }
                     CardTerminalRxCmd::AlertPaymentIncomeArcade(raw_income) => {
                         // judge current application mode and income backup

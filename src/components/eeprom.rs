@@ -446,7 +446,6 @@ const EEPROM_PAGE_MAX: RawRomAddress = (EEPROM_SIZE >> PAGE_SHIFT) as RawRomAddr
 pub struct NovellaModuleControlBlock {
     data: MemStorage,
     controls: [NovellaSectionControlBlock; SECTION_NUM],
-    uptime: Duration,
 }
 
 unsafe impl Zeroable for NovellaModuleControlBlock {
@@ -454,7 +453,6 @@ unsafe impl Zeroable for NovellaModuleControlBlock {
         Self {
             data: MemStorage::zeroed(),
             controls: [NovellaSectionControlBlock::zeroed(); SECTION_NUM],
-            uptime: unsafe { core::mem::zeroed() },
         }
     }
 }
@@ -545,6 +543,7 @@ pub struct Novella {
     nwp: UnsafeCell<OutputOpenDrain<'static, peripherals::PF0>>,
     crc: UnsafeCell<Crc<'static>>, // crc will be mutexed for reuse HwConfig
     buffer: UnsafeCell<[u8; PAGE_SIZE + core::mem::size_of::<EepromAddress>()]>,
+    uptime: UnsafeCell<Duration>,
     mem_storage: Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>,
 }
 
@@ -562,6 +561,7 @@ impl Novella {
             nwp: UnsafeCell::new(nwp),
             buffer: UnsafeCell::new([0u8; PAGE_SIZE + core::mem::size_of::<EepromAddress>()]),
             mem_storage: Mutex::new(NovellaModuleControlBlock::const_default()),
+            uptime: UnsafeCell::new(Duration::from_ticks(0)),
         }
     }
 
@@ -1213,15 +1213,21 @@ impl Novella {
 
         match broken_detected {
             0 => {
-                cb.uptime = Duration::from_ticks(longest.as_ticks());
+                unsafe {
+                    *self.uptime.get() = Duration::from_ticks(longest.as_ticks());
+                };
                 Ok(NovellaInitOk::Success(longest))
             }
             TOTAL_SLOT_NUM => {
-                cb.uptime = Duration::from_ticks(0);
+                unsafe {
+                    *self.uptime.get() = Duration::from_ticks(0);
+                };
                 Ok(NovellaInitOk::FirstBoot)
             }
             x => {
-                cb.uptime = Duration::from_ticks(longest.as_ticks());
+                unsafe {
+                    *self.uptime.get() = Duration::from_ticks(longest.as_ticks());
+                };
                 Ok(NovellaInitOk::PartialSucess(longest, broken_detected))
             }
         }
@@ -1258,10 +1264,8 @@ impl Novella {
     }
 
     /// Get uptime of this board
-    pub async fn get_uptime(&self) -> Duration {
-        Duration::from_ticks(
-            self.mem_storage.lock().await.uptime.as_ticks() + Instant::now().as_ticks(),
-        )
+    pub fn get_uptime(&self) -> Duration {
+        Duration::from_ticks(unsafe { *self.uptime.get() }.as_ticks() + Instant::now().as_ticks())
     }
 
     async fn run(&self) {
@@ -1274,7 +1278,7 @@ impl Novella {
                     cb.controls[sect_idx].test_and_robin(&SECTION_TABLE[sect_idx]);
 
                 if let Some(next_slot) = dirty_or_next_slot {
-                    let new_uptime = self.get_uptime().await;
+                    let new_uptime = self.get_uptime();
 
                     defmt::debug!(
                         "EEPROM write on [{:02}][{:02}], ticks : {}",
@@ -1288,10 +1292,10 @@ impl Novella {
                         .await
                     {
                         Ok(_) => {
-                            self.mem_storage.lock().await.controls[sect_idx].clr_dirty();
+                            cb.controls[sect_idx].clr_dirty();
                         }
                         Err(NovellaWriteError::MissingEeprom) => {
-                            self.mem_storage.lock().await.controls[sect_idx].clr_dirty();
+                            cb.controls[sect_idx].clr_dirty();
                             defmt::error!("MissingEeprom");
                         }
                         Err(NovellaWriteError::Wearout) => {
