@@ -30,7 +30,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 | `10`      | `GND`          | Product - Pole Power Input                             |
 
 
-- Pins are counted from the left.
+- Pins are counted from the right.
 - You can also input power directly into BillMock-HW through `12V` and `GND` pins.
 - The power pins from this port cannot be used for power output. When power input to this port is blocked, reverse voltage does not flow.
 - The "Busy" output signal remains active low from the moment a payment signal is received from the credit card or when the VEND input signal goes active low until the VEND output signal toggles and completes.
@@ -60,7 +60,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 | `9`       | `12V`          | Product + Pole Power Input                             |
 | `10`      | `GND`          | Product - Pole Power Input                             |
 
-- Pins are counted from the left.
+- Pins are counted from the right.
 - You can also input power directly into BillMock-HW through `12V` and `GND` pins.
 - The power pins from this port cannot be used for power output. When power input to this port is blocked, reverse voltage does not flow.
 - The "Busy" output signal remains active low from the moment a payment signal is received from the credit card or when the VEND input signal goes active low until the VEND output signal toggles and completes.

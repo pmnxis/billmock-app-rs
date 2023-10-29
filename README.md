@@ -24,14 +24,19 @@ This project began development at the request of **GPARK Co., Ltd**<sup>[4](#foo
 The project has been granted an open source disclosure except of NDA era.
 
 ## Target Hardware
-Based on BillMock-HW 0.4 mini and 0.4. <br/>
+Based on BillMock-HW 0.5 mini, 0.4 mini and 0.4. <br/>
 0.2 and 0.3 HW bring-up codes are still left for recyle the old PCB.
 - 0.2 HW has different gpio configuration compare to latest boards.
 - 0.3 HW has minor bugs, floating on VendSide-Inhibit and missing net route on VendSide-1P-StartJam.
 - 0.4 HW fixed 0.3 HW bugs.
 - 0.4 HW mini reduced BOM for mass-manufacturing
+- 0.5 HW mini added tact switch for SVC mode call
 
-If need to use old 0.2 HW, run `cargo build --features hw_0v2 --no-default-features`.
+Current default HW is `0.5 mini`. If need to use old 0.4 or 0.4 mini, following below command lines
+```sh
+cargo build --features hw_0v4 --no-default-features --release
+cargo build --features hw_mini_0v4 --no-default-features --release
+```
 
 ### Target hardware image
 ![Actual BillMock PCB 0v3](https://billmock.gpark.biz/images/BillMockPCB_0v4.jpg)
@@ -42,8 +47,11 @@ https://github.com/pmnxis/BillMock-HW-RELEASE
 
 The schematic printed in PDF is distributed under CC BY-SA 3.0, but the actual Gerber files and project files are private.
 
+#### v 0.5 Mini (2023-10-24)
+[BillMock-Mini-HW-0v5.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-Mini-HW-0v5.pdf)
+
 #### v 0.4 Mini (2023-09-12 or 2023-09-13)
-[BillMock-Mini-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch//BillMock-Mini-HW-0v4.pdf)
+[BillMock-Mini-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-Mini-HW-0v4.pdf)
 
 #### v 0.4 (2023-09-08)
 [BillMock-HW-0v4.pdf](https://github.com/pmnxis/BillMock-HW-RELEASE/blob/master/sch/BillMock-HW-0v4.pdf)
