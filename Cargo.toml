@@ -10,14 +10,15 @@ authors = ["Jinwoo Park <pmnxis@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "application side of billmock hardware, powered by rust-embedded"
 
+# feature name starting with "hw_" is reserved for mass production config generator
 [features]
 default = ["billmock_default"]
-hw_bug_host_inhibit_floating = []  # #19 bug (https://github.com/pmnxis/billmock-app-rs/issues/19)
+hotfix_hwbug_host_inhibit_floating = []  # #19 bug (https://github.com/pmnxis/billmock-app-rs/issues/19)
 billmock_default = ["hw_mini_0v5"] # To use rust-analzyer utilizing noDefaultFeatures on vscode
 eeprom = []
 svc_button = []                    # SVC button
-hw_0v2 = ["hw_bug_host_inhibit_floating"]
-hw_0v3 = ["hw_bug_host_inhibit_floating"]
+hw_0v2 = ["hotfix_hwbug_host_inhibit_floating"]
+hw_0v3 = ["hotfix_hwbug_host_inhibit_floating"]
 hw_0v4 = ["eeprom"]
 hw_mini_0v4 = ["eeprom"]
 hw_mini_0v5 = ["eeprom", "svc_button"]
@@ -41,7 +42,7 @@ num_enum = { version = "0.7.0", default-features = false } # Application specifi
 bit_field = "0.10"
 nonmax = { version = "0.5.3", default-features = false, features = [] } # to use common NonMax
 static_assertions = "1.1.0"
-env_to_array = { version = "0.3.1", features = ["hex"] }
+env_to_array = { git = "https://github.com/pmnxis/env-to-array.git", branch = "dynamic_array_patch", features = ["hex"] }
 zeroable = "0.2.0"
 const-zero = "0.1.1"
 
@@ -64,6 +65,8 @@ billmock-otp-dev-info = { git = "https://github.com/pmnxis/billmock-mptool.git" 
 [build-dependencies]
 git2 = "0.18" # Git library for Rust
 cargo_metadata = "0.18"
+mp-fingerprint-type = { git = "https://github.com/pmnxis/billmock-mptool.git" }
+hex = "0.4"
 
 [profile.release]
 # or "z"

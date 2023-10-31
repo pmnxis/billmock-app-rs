@@ -8,17 +8,9 @@ use std::process::Command;
 
 use cargo_metadata::{Error, MetadataCommand};
 use git2::Repository;
+use mp_fingerprint_type::{FirmwareFingerprint, MpFingerprint};
 
 const IGNORE_PATH_DEP_INJ: &str = ".cargo/config.toml";
-
-pub fn format_continuous(v: Vec<u8>) -> String {
-    let mut s = String::new();
-    for a in v {
-        s.push_str(format!("{:02X}", a).as_str());
-    }
-
-    s
-}
 
 fn main() -> Result<(), Error> {
     println!("cargo:rustc-link-arg-bins=--nmagic");
@@ -35,14 +27,11 @@ fn main() -> Result<(), Error> {
         println!("cargo:rustc-env=PROJECT_NAME={}", project_name);
         println!(
             "cargo:rustc-env=PROJECT_VERSION={}",
-            format_continuous(project_version.into())
+            hex::encode(project_version),
         );
     } else {
         println!("cargo:rustc-env=PROJECT_NAME=unkown");
-        println!(
-            "cargo:rustc-env=PROJECT_VERSION={}",
-            format_continuous(b"?.?.?".into())
-        );
+        println!("cargo:rustc-env=PROJECT_VERSION={}", hex::encode(b"?.?.?"),);
     }
 
     // Get the Git commit hash
@@ -98,9 +87,46 @@ fn main() -> Result<(), Error> {
 
     println!(
         "cargo:rustc-env=GIT_COMMIT_SHORT_HASH={}",
-        format_continuous(format!("{}{}", commit_short_hash, short_dirty_str).into())
+        hex::encode(format!("{}{}", commit_short_hash, short_dirty_str))
     );
     println!("cargo:rustc-env=GIT_COMMIT_DATETIME={}", commit_datetime);
+
+    // Generate elf header fingerprint
+    let metadata = MetadataCommand::new().no_deps().exec()?;
+    let main_package = metadata
+        .packages
+        .first()
+        .expect("Cargo.toml doesn't have metadata");
+
+    let hw_feature: Vec<(String, String)> = std::env::vars()
+        .filter(|(key, value)| key.starts_with("CARGO_FEATURE_HW_") && value == "1")
+        .collect();
+
+    if hw_feature.is_empty() {
+        panic!("There's no specified hardware target");
+    } else if hw_feature.len() > 1 {
+        panic!("Cannot specify multiple hardware");
+    }
+
+    let feature_based_model_ver = hw_feature[0]
+        .0
+        .strip_prefix("CARGO_FEATURE_HW_")
+        .unwrap()
+        .replace("_", "-");
+
+    let fingerprint = MpFingerprint {
+        firmware_fingerprint: FirmwareFingerprint {
+            model_name: "BillMock-HW".to_owned(), // this is const value
+            model_ver: feature_based_model_ver,
+            firmware_ver: main_package.version.to_string(),
+            firmware_git_hash: format!("{}{}", commit_hash, dirty_str),
+        },
+    };
+
+    println!(
+        "cargo:rustc-env=MP_FINGERPRINT_TOML_HEX={}",
+        fingerprint.to_hex_string(),
+    );
 
     Ok(())
 }
