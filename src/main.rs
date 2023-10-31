@@ -14,6 +14,7 @@
 mod application;
 mod boards;
 mod components;
+mod mp_fingerprint;
 mod semi_layer;
 mod types;
 
