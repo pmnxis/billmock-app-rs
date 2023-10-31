@@ -65,7 +65,7 @@ billmock-otp-dev-info = { git = "https://github.com/pmnxis/billmock-mptool.git" 
 [build-dependencies]
 git2 = "0.18" # Git library for Rust
 cargo_metadata = "0.18"
-mp-fingerprint-type = { git = "https://github.com/pmnxis/billmock-mptool.git", branch = "master" }
+mp-fingerprint-type = { git = "https://github.com/pmnxis/billmock-mptool.git" }
 hex = "0.4"
 
 [profile.release]
