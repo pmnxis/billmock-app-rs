@@ -1290,29 +1290,17 @@ impl Novella {
     }
 
     async fn run(&self) {
-        async fn write(
-            novella: &Novella,
+        fn after_write(
+            result: Result<(), NovellaWriteError>,
+            sect_idx: usize,
             cb: &mut MutexGuard<'_, ThreadModeRawMutex, NovellaModuleControlBlock>,
-            kind: NvMemSectionKind,
-            next_slot: u8,
         ) {
-            let new_uptime = novella.get_uptime();
-            defmt::debug!(
-                "EEPROM write on [{:02}][{:02}], ticks : {}",
-                kind as u8,
-                next_slot,
-                new_uptime
-            );
-
-            match novella
-                .raw_slot_write_nonblocking(cb, kind, next_slot, new_uptime)
-                .await
-            {
+            match result {
                 Ok(_) => {
-                    cb.controls[kind as usize].clr_dirty();
+                    cb.controls[sect_idx].clr_dirty();
                 }
                 Err(NovellaWriteError::MissingEeprom) => {
-                    cb.controls[kind as usize].clr_dirty();
+                    cb.controls[sect_idx].clr_dirty();
                     defmt::error!("MissingEeprom");
                 }
                 Err(NovellaWriteError::Wearout) => {
@@ -1338,8 +1326,19 @@ impl Novella {
                     cb.controls[sect_idx].test_and_robin(&SECTION_TABLE[sect_idx]);
 
                 if let Some(next_slot) = dirty_or_next_slot {
-                    write(self, &mut cb, kind, next_slot).await;
-                    every_2sec == 0;
+                    let new_uptime = self.get_uptime();
+
+                    defmt::debug!(
+                        "Write EEPROM on [{:02}][{:02}], ticks : {}",
+                        sect_idx,
+                        next_slot,
+                        new_uptime
+                    );
+
+                    let result = self
+                        .raw_slot_write_nonblocking(&mut cb, kind, next_slot, new_uptime)
+                        .await;
+                    after_write(result, sect_idx, &mut cb);
                 }
             }
 
@@ -1350,8 +1349,18 @@ impl Novella {
                 let force_next_slot = cb.controls[starving_kind as usize]
                     .force_robin(&SECTION_TABLE[starving_kind as usize]);
 
-                defmt::debug!("Rewrite EEPROM artificially to avoid startving");
-                write(self, &mut cb, starving_kind, force_next_slot).await;
+                let new_uptime = self.get_uptime();
+                defmt::debug!(
+                    "Rewrite startving EEPROM on [{:02}][{:02}], ticks : {}",
+                    starving_kind as u8,
+                    force_next_slot,
+                    new_uptime,
+                );
+
+                let result = self
+                    .raw_slot_write_nonblocking(&mut cb, starving_kind, force_next_slot, new_uptime)
+                    .await;
+                after_write(result, starving_kind as usize, &mut cb);
 
                 every_2sec = 0;
             } else {
