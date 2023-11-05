@@ -112,7 +112,7 @@ fn main() -> Result<(), Error> {
         .0
         .strip_prefix("CARGO_FEATURE_HW_")
         .unwrap()
-        .replace("_", "-");
+        .replace('_', "-");
 
     let fingerprint = MpFingerprint {
         firmware_fingerprint: FirmwareFingerprint {

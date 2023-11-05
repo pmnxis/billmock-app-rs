@@ -45,7 +45,7 @@ async fn get_tid_alt(novella: &Novella) -> [u8; TID_LEN] {
     let tid = novella.lock_read(eeprom::select::TERMINAL_ID).await.normal;
 
     for a in tid {
-        if !(b' ' <= a && a <= b'z') {
+        if !(b' '..=b'z').contains(&a) {
             return ALT_TID;
         }
     }

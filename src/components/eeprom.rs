@@ -1351,7 +1351,7 @@ impl Novella {
 
                 let new_uptime = self.get_uptime();
                 defmt::debug!(
-                    "Rewrite startving EEPROM on [{:02}][{:02}], ticks : {}",
+                    "Rewrite starving EEPROM on [{:02}][{:02}], ticks : {}",
                     starving_kind as u8,
                     force_next_slot,
                     new_uptime,
