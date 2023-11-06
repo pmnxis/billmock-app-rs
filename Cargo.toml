@@ -69,18 +69,17 @@ mp-fingerprint-type = { git = "https://github.com/pmnxis/billmock-mptool.git" }
 hex = "0.4"
 
 [profile.release]
-# or "z"
 codegen-units = 1
-debug = 2
+debug = 0
 debug-assertions = false # <-
 lto = 'fat'
-opt-level = "s"
+opt-level = "s" # or "z"
 overflow-checks = false # <-
 
 [profile.dev]
-# or "z"
 codegen-units = 1
 debug = 2
 debug-assertions = true # <-
+lto = 'fat'
 opt-level = "s"
 overflow-checks = true # <-
