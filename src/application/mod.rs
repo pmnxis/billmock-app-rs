@@ -115,6 +115,7 @@ impl Application {
                             .send(CardTerminalTxCmd::ResponseDeviceInfo)
                             .await;
 
+                        // todo! - don't care did_we_ask var, and just backup PortBackup always for inhibit action.
                         if (did_we_ask & 0b111) == 0 {
                             hardware
                                 .card_reader
@@ -184,9 +185,13 @@ impl Application {
                         // read from lock_read for do something
                         // todo! - handle different TId/and something
                     }
-                    CardTerminalRxCmd::ResponseTerminalInfo => {
-                        // read from lock_read for do something
-                        // todo! - handle different TID/and something
+                    // read from lock_read for do something
+                    // handle different TID/and something
+                    CardTerminalRxCmd::ResponseTerminalInfo(TidStatus::Changed) => {
+                        hardware
+                            .card_reader
+                            .send(CardTerminalTxCmd::RequestSaleSlotInfo)
+                            .await;
                     }
 
                     _ => {}

@@ -45,6 +45,13 @@ pub enum CardTerminalError {
     FailedResponse,
 }
 
+#[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum TidStatus {
+    Unknown,
+    Changed,
+    Unchanged,
+}
+
 #[derive(PartialEq, Eq, Clone, defmt::Format)]
 pub enum CardTerminalRxCmd {
     /// Ack signal
@@ -62,7 +69,7 @@ pub enum CardTerminalRxCmd {
     /// 0xFB 0x14 0x02
     /// Detail pakcet data should be parsed with additional function call.
     /// using additional function call for avoid queue size being huge.
-    ResponseTerminalInfo,
+    ResponseTerminalInfo(TidStatus),
 }
 
 #[derive(PartialEq, Eq, Clone, defmt::Format)]
@@ -81,7 +88,8 @@ pub enum CardTerminalTxCmd {
     /// It's for rollback or treat as inihibit action
     PushSaleSlotInfo,
     /// Mixed request of PushSaleSlotInfo,
-    /// todo! - This queue element should be touched later
+    /// Unfortunately, this feature is still unstable due to sequence logic issues
+    /// in the real environment. Therefore, we do not recommend using it at this time.
     PushSaleSlotInfoPartialInhibit(RawPlayersInhibit),
     /// Request terminal info, include TID, terminal program version etc.
     RequestTerminalInfo,
@@ -124,7 +132,8 @@ pub trait CardTerminalRxParse {
     fn post_parse_response_terminal_info(
         &self,
         raw: &[u8],
-    ) -> Result<(TerminalVersion, RawTerminalId), CardTerminalError>;
+        prev_terminal_id: &RawTerminalId,
+    ) -> Result<(CardTerminalRxCmd, TerminalVersion, RawTerminalId), CardTerminalError>;
 }
 
 pub trait CardTerminalTxGen {
@@ -155,7 +164,7 @@ pub trait CardTerminalTxGen {
     fn push_sale_slot_info<'a>(
         &self,
         buffer: &'a mut [u8],
-        port_backup: &'a CardReaderPortBackup,
+        port_backup: &CardReaderPortBackup,
     ) -> &'a [u8];
 
     /// Generate PushSaleSlotInfoPartialInhibit signal to send
@@ -163,7 +172,7 @@ pub trait CardTerminalTxGen {
     fn push_sale_slot_info_partial_inhibit<'a>(
         &self,
         buffer: &'a mut [u8],
-        port_backup: &'a CardReaderPortBackup,
+        port_backup: &CardReaderPortBackup,
     ) -> &'a [u8];
 
     /// Generate RequestSaleSlotInfo signal to send

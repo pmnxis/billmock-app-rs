@@ -27,7 +27,8 @@ target = "thumbv6m-none-eabi"
 # from the local environment into the actual open-source build.
 [patch.'https://github.com/pmnxis/billmock-app-rs.git']
 card-terminal-adapter = { path = "card-terminal-adapter" }
-billmock-plug-card = { path = "billmock-plug-card" }
+# billmock-plug-card = { path = "billmock-plug-card" }
+billmock-plug-card = { path = "../billmock-plug-ed785" }
 
 # Custom println! To use formatting, use the latest branch.
 # [patch.crates-io]

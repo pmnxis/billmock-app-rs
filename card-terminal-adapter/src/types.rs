@@ -86,7 +86,7 @@ pub struct RawPlayersInhibit {
 }
 
 #[repr(C)]
-#[derive(Clone, Zeroable)]
+#[derive(Clone, Zeroable, PartialEq, PartialOrd)]
 pub struct RawTerminalId {
     pub normal: [u8; 10],
     pub extend: [u8; 3],
@@ -192,6 +192,22 @@ impl CardReaderPortBackup {
             }
         }
         0
+    }
+
+    pub fn set_inhibit(&mut self, inhibit: RawPlayersInhibit) {
+        for i in 0..self.raw_card_port_backup.len() {
+            let is_disabled = self.raw_card_port_backup[i].property == SlotProperty::Disabled;
+            let right_side = (i & 1) == 0;
+            let do_inhibit = if !right_side { inhibit.p1 } else { inhibit.p2 };
+
+            if !is_disabled {
+                self.raw_card_port_backup[i].property = if do_inhibit {
+                    SlotProperty::TemporaryDisabled
+                } else {
+                    SlotProperty::Enabled
+                };
+            }
+        }
     }
 }
 

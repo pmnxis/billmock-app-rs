@@ -1339,6 +1339,7 @@ impl Novella {
                         .raw_slot_write_nonblocking(&mut cb, kind, next_slot, new_uptime)
                         .await;
                     after_write(result, sect_idx, &mut cb);
+                    every_2sec = 0;
                 }
             }
 
