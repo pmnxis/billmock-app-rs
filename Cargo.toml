@@ -5,7 +5,7 @@
 [package]
 name = "billmock-app-rs"
 edition = "2021"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["Jinwoo Park <pmnxis@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "application side of billmock hardware, powered by rust-embedded"
