@@ -11,3 +11,4 @@ out/
 nda
 nda_note.md
 *.svd
+.vscode/launch.json

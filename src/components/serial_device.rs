@@ -68,14 +68,11 @@ impl CardReaderDevice {
 
     pub async fn run(&self, novella: &'static Novella) {
         let plug = KiccEd785Plug {};
-        // let mut current_varient = TerminalVersion::Unknown;
-
         let rx = unsafe { &mut *self.rx.get() };
         let tx = unsafe { &mut *self.tx.get() };
         let mut rx_buf = [0u8; CARD_READER_RX_BUFFER_SIZE];
         let mut tx_buf = [0u8; CARD_READER_TX_BUFFER_SIZE];
         let mut stacked: StackedRingbufferRxIndex = 0;
-        // let mut inhibit_cache: Option<IncomeArcadeRequest> = None;
 
         loop {
             // TX not hang on IO wait
@@ -94,10 +91,27 @@ impl CardReaderDevice {
                         CardTerminalTxCmd::PushCoinPaperAcceptorIncome(x) => {
                             plug.alert_coin_paper_acceptor_income(&mut tx_buf, x)
                         }
-                        CardTerminalTxCmd::PushSaleSlotInfo => plug.response_ack(&mut tx_buf),
-                        CardTerminalTxCmd::PushSaleSlotInfoPartialInhibit(_x) => {
-                            // push_sale_slot_info_partial_inhibit
-                            unimplemented!()
+                        CardTerminalTxCmd::PushSaleSlotInfo => {
+                            let slot_info =
+                                novella.lock_read(eeprom::select::CARD_PORT_BACKUP).await;
+
+                            plug.push_sale_slot_info(&mut tx_buf, &slot_info)
+                        }
+                        CardTerminalTxCmd::PushSaleSlotInfoPartialInhibit(x) => {
+                            // Unfortunately, this feature is still unstable due to sequence logic issues
+                            // in the real environment. Therefore, we do not recommend using it at this time.
+                            let mut slot_info =
+                                novella.lock_read(eeprom::select::CARD_PORT_BACKUP).await;
+                            slot_info.set_inhibit(x);
+
+                            let ret =
+                                plug.push_sale_slot_info_partial_inhibit(&mut tx_buf, &slot_info);
+
+                            novella
+                                .lock_write(eeprom::select::CARD_PORT_BACKUP, slot_info)
+                                .await;
+
+                            ret
                         }
                         CardTerminalTxCmd::RequestSaleSlotInfo => {
                             plug.request_sale_slot_info(&mut tx_buf)
@@ -162,35 +176,91 @@ impl CardReaderDevice {
 
                     match plug.pre_parse_common(rx_source) {
                         Ok(rx_cmd) => {
-                            match rx_cmd {
+                            let final_rx_cmd = match rx_cmd {
                                 CardTerminalRxCmd::ResponseSaleSlotInfo => {
-                                    let _result =
-                                        plug.post_parse_response_sale_slot_info(rx_source);
+                                    let result = plug.post_parse_response_sale_slot_info(rx_source);
+
+                                    if let Ok(x) = result {
+                                        // todo! - considier SlotProperty::TemporaryDisabled
+                                        // Unfortunately, this feature is still unstable due to sequence logic
+                                        // issues in the real environment.
+                                        // Therefore, we do not recommend using it at this time.
+
+                                        novella
+                                            .lock_write(eeprom::select::CARD_PORT_BACKUP, x)
+                                            .await;
+
+                                        Ok(rx_cmd)
+                                    } else if let Err(e) = result {
+                                        defmt::error!("CardTerminal Parse Error : {}", e);
+                                        Err(())
+                                    } else {
+                                        Err(())
+                                    }
                                 }
-                                CardTerminalRxCmd::ResponseTerminalInfo => {
-                                    let result = plug.post_parse_response_terminal_info(rx_source);
+                                CardTerminalRxCmd::ResponseTerminalInfo(_) => {
+                                    let prev_tid =
+                                        novella.lock_read(eeprom::select::TERMINAL_ID).await;
+
+                                    let result = plug
+                                        .post_parse_response_terminal_info(rx_source, &prev_tid);
                                     match result {
-                                        Ok((_t_ver, tid)) => {
-                                            defmt::info!("tid : {=[u8]:a}", tid.normal);
-                                            novella
-                                                .lock_write(eeprom::select::TERMINAL_ID, tid)
-                                                .await;
-                                        }
+                                        Ok((ret, _t_ver, tid)) => match ret {
+                                            CardTerminalRxCmd::ResponseTerminalInfo(
+                                                TidStatus::Changed,
+                                            ) => {
+                                                defmt::info!(
+                                                    "tid : {=[u8]:a} -> {=[u8]:a}",
+                                                    prev_tid.normal,
+                                                    tid.normal
+                                                );
+
+                                                novella
+                                                    .lock_write(eeprom::select::TERMINAL_ID, tid)
+                                                    .await;
+
+                                                Ok(ret)
+                                            }
+                                            CardTerminalRxCmd::ResponseTerminalInfo(
+                                                TidStatus::Unchanged,
+                                            ) => {
+                                                defmt::info!(
+                                                    "tid : {=[u8]:a} (Unchanged)",
+                                                    tid.normal
+                                                );
+
+                                                Ok(ret)
+                                            }
+                                            _ => {
+                                                defmt::error!(
+                                                    "Unexpected ResponseTerminalInfo error pass"
+                                                );
+                                                Err(())
+                                            }
+                                        },
                                         Err(e) => {
                                             defmt::error!("ResponseTerminalInfo error : {:?}", e);
+                                            Err(())
                                         }
                                     }
                                 }
-                                _ => {}
+                                x => Ok(x),
+                            };
+
+                            // finally, only parse when Ok(rx_cmd)
+                            match final_rx_cmd {
+                                Ok(rx_cmd) => {
+                                    defmt::info!(
+                                        "{:#X}\nCardTerminalRxCmd : {:?}, restack : {}",
+                                        rx_source,
+                                        rx_cmd,
+                                        stacked != 0,
+                                    );
+                                    stacked = 0;
+                                    self.recv_channel.send(rx_cmd).await;
+                                }
+                                Err(_e) => {}
                             }
-                            defmt::info!(
-                                "{:#X}\nCardTerminalRxCmd : {:?}, restack : {}",
-                                rx_source,
-                                rx_cmd,
-                                stacked != 0,
-                            );
-                            stacked = 0;
-                            self.recv_channel.send(rx_cmd).await;
                         }
                         Err(e) => {
                             defmt::error!("CardTerminal Parse Error : {}", e);

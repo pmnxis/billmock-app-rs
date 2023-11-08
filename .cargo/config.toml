@@ -21,9 +21,6 @@ runner = [
 [build]
 target = "thumbv6m-none-eabi"
 
-[env]
-DEFMT_LOG = "trace"
-
 # As described in the `Cargo.toml` located in the root directory of the project,
 # in order to maintain a separation between the NDA code and open-source code,
 # the project follows a re-patching approach for incorporating the library source code

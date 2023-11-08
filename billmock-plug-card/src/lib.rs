@@ -44,7 +44,8 @@ impl CardTerminalRxParse for KiccEd785Plug {
     fn post_parse_response_terminal_info(
         &self,
         _raw: &[u8],
-    ) -> Result<(TerminalVersion, RawTerminalId), CardTerminalError> {
+        _prev_terminal_id: &RawTerminalId,
+    ) -> Result<(CardTerminalRxCmd, TerminalVersion, RawTerminalId), CardTerminalError> {
         // implement me for actual usage
         Err(CardTerminalError::UnsupportedSpec)
     }
@@ -83,7 +84,7 @@ impl CardTerminalTxGen for KiccEd785Plug {
     fn push_sale_slot_info<'a>(
         &self,
         buffer: &'a mut [u8],
-        _port_backup: &'a CardReaderPortBackup,
+        _port_backup: &CardReaderPortBackup,
     ) -> &'a [u8] {
         // implement me for actual usage
         &buffer[0..0]
@@ -92,7 +93,7 @@ impl CardTerminalTxGen for KiccEd785Plug {
     fn push_sale_slot_info_partial_inhibit<'a>(
         &self,
         buffer: &'a mut [u8],
-        _port_backup: &'a CardReaderPortBackup,
+        _port_backup: &CardReaderPortBackup,
     ) -> &'a [u8] {
         // implement me for actual usage
         &buffer[0..0]

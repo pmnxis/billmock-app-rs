@@ -128,5 +128,14 @@ fn main() -> Result<(), Error> {
         fingerprint.to_hex_string(),
     );
 
+    // DEFMT_LOG level configuration
+    let profile = std::env::var("PROFILE").unwrap();
+    let log_level = match profile.as_str() {
+        "release" => "error",
+        _ => "trace",
+    };
+
+    println!("cargo:rustc-env=DEFMT_LOG={}", log_level);
+
     Ok(())
 }
