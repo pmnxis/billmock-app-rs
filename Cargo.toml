@@ -65,8 +65,7 @@ billmock-otp-dev-info = { git = "https://github.com/pmnxis/billmock-mptool.git" 
 [build-dependencies]
 git2 = "0.18" # Git library for Rust
 cargo_metadata = "0.18"
-# mp-fingerprint-type = { git = "https://github.com/pmnxis/billmock-mptool.git" }
-mp-fingerprint-type = { path = "../billmock-mptool/mp-fingerprint-type" }
+mp-fingerprint-type = { git = "https://github.com/pmnxis/billmock-mptool.git" }
 hex = "0.4"
 card-terminal-adapter = { path = "card-terminal-adapter" }
 billmock-plug-card = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
