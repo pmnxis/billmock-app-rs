@@ -58,7 +58,7 @@ const-zero = "0.1.1"
 # `billmock-plug-card` would be replaced to NDA library that working on real field with dependency injection
 # details : https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch-section
 
-card-terminal-adapter = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
+card-terminal-adapter = { path = "card-terminal-adapter" }
 billmock-plug-card = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
 billmock-otp-dev-info = { git = "https://github.com/pmnxis/billmock-mptool.git" }
 
@@ -67,6 +67,8 @@ git2 = "0.18" # Git library for Rust
 cargo_metadata = "0.18"
 mp-fingerprint-type = { git = "https://github.com/pmnxis/billmock-mptool.git" }
 hex = "0.4"
+card-terminal-adapter = { path = "card-terminal-adapter" }
+billmock-plug-card = { git = "https://github.com/pmnxis/billmock-app-rs.git" }
 
 [profile.release]
 codegen-units = 1

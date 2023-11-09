@@ -6,6 +6,7 @@
 
 use std::process::Command;
 
+use card_terminal_adapter::CardTerminalConst;
 use cargo_metadata::{Error, MetadataCommand};
 use git2::Repository;
 use mp_fingerprint_type::{FirmwareFingerprint, MpFingerprint};
@@ -120,8 +121,13 @@ fn main() -> Result<(), Error> {
             model_ver: feature_based_model_ver,
             firmware_ver: main_package.version.to_string(),
             firmware_git_hash: format!("{}{}", commit_hash, dirty_str),
+            is_nda: billmock_plug_card::KiccEd785Plug::is_nda(),
         },
     };
+
+    if !billmock_plug_card::KiccEd785Plug::is_nda() {
+        println!("cargo:warning=This is not NDA serial device build.",);
+    }
 
     println!(
         "cargo:rustc-env=MP_FINGERPRINT_TOML_HEX={}",
