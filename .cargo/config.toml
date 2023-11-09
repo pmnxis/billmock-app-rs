@@ -26,7 +26,6 @@ target = "thumbv6m-none-eabi"
 # the project follows a re-patching approach for incorporating the library source code
 # from the local environment into the actual open-source build.
 [patch.'https://github.com/pmnxis/billmock-app-rs.git']
-card-terminal-adapter = { path = "card-terminal-adapter" }
 billmock-plug-card = { path = "billmock-plug-card" }
 
 # Custom println! To use formatting, use the latest branch.
