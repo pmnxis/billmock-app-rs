@@ -13,12 +13,12 @@ mod player_to_vend_led;
 use card_terminal_adapter::types::*;
 use card_terminal_adapter::*;
 use embassy_futures::yield_now;
-use embassy_time::Duration;
-use embassy_time::Timer;
+use embassy_time::{Duration, Instant, Timer};
 use io_card::PaymentReceive;
 
 use self::mutual_inhibit::MutualInhibit;
 use crate::boards::*;
+use crate::components::eeprom;
 use crate::semi_layer;
 use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::dip_switch_config::{AppMode0V3, TimingOverride};
@@ -43,6 +43,7 @@ impl Application {
         // this function should be inside of loop.
         let board = self.board;
         let hardware = &self.board.hardware;
+        let card_reader = &hardware.card_reader;
         let shared = self.board.shared_resource;
         let async_input_event_ch = &shared.async_input_event_ch;
         let mut timing = TimingOverride::default();
@@ -51,6 +52,10 @@ impl Application {
         let mut income_backup: Option<PaymentReceive> = None; // for StartButtonDecideSerialToVend
         let mut mutual_inhibit = MutualInhibit::new();
         let mut did_we_ask: u8 = 0;
+        #[cfg(feature = "svc_button")]
+        let (mut last_svc_pressed, mut is_svc_pressed): (Instant, bool) = (Instant::now(), false);
+        #[cfg(feature = "svc_button")]
+        let eeprom = &hardware.eeprom;
 
         loop {
             // timing flag would be used in future implementation.
@@ -93,32 +98,24 @@ impl Application {
                 income_backup = None;
 
                 if appmode_latest == AppMode0V3::DisplayRom {
-                    hardware
-                        .card_reader
-                        .send(CardTerminalTxCmd::DisplayRom)
-                        .await;
+                    card_reader.send(CardTerminalTxCmd::DisplayRom).await;
                 } else if appmode == AppMode0V3::DisplayRom {
-                    hardware
-                        .card_reader
-                        .send(CardTerminalTxCmd::DisplayHwInfo)
-                        .await;
+                    card_reader.send(CardTerminalTxCmd::DisplayHwInfo).await;
                 }
 
                 appmode = appmode_latest;
             }
 
-            if let Ok(x) = hardware.card_reader.recv_channel.try_receive() {
+            if let Ok(x) = card_reader.recv_channel.try_receive() {
                 match x {
                     CardTerminalRxCmd::RequestDeviceInfo => {
-                        hardware
-                            .card_reader
+                        card_reader
                             .send(CardTerminalTxCmd::ResponseDeviceInfo)
                             .await;
 
                         // todo! - don't care did_we_ask var, and just backup PortBackup always for inhibit action.
                         if (did_we_ask & 0b111) == 0 {
-                            hardware
-                                .card_reader
+                            card_reader
                                 .send(CardTerminalTxCmd::RequestTerminalInfo)
                                 .await;
                         }
@@ -133,12 +130,12 @@ impl Application {
                             match income_backup.is_some() {
                                 true => {
                                     defmt::warn!("StartButtonDecideSerialToVend - duplicated income received, player should press start button.");
-                                    hardware.card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
+                                    card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
                                 }
                                 false => {
                                     defmt::info!("StartButtonDecideSerialToVend - income received, wait for start button");
                                     income_backup = Some(payment);
-                                    hardware.card_reader.send_ack().await;
+                                    card_reader.send_ack().await;
                                 }
                             }
                         } else {
@@ -146,7 +143,7 @@ impl Application {
                                 // .override_player_by_duration()
                                 .apply_output(board, timing.is_override_force())
                                 .await;
-                            hardware.card_reader.send_ack().await;
+                            card_reader.send_ack().await;
                         }
                     }
                     CardTerminalRxCmd::AlertPaymentIncomePrice(raw_price) => {
@@ -165,12 +162,12 @@ impl Application {
                             match income_backup.is_some() {
                                 true => {
                                     defmt::warn!("StartButtonDecideSerialToVend - duplicated income received, player should press start button.");
-                                    hardware.card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
+                                    card_reader.send_nack().await; // even send nack, it doesn't cancel payment with NDA device.
                                 }
                                 false => {
                                     defmt::info!("StartButtonDecideSerialToVend - income received, wait for start button");
                                     income_backup = Some(payment);
-                                    hardware.card_reader.send_ack().await;
+                                    card_reader.send_ack().await;
                                 }
                             }
                         } else {
@@ -178,7 +175,7 @@ impl Application {
                                 // .override_player_by_duration()
                                 .apply_output(board, timing.is_override_force())
                                 .await;
-                            hardware.card_reader.send_ack().await;
+                            card_reader.send_ack().await;
                         }
                     }
                     CardTerminalRxCmd::ResponseSaleSlotInfo => {
@@ -188,8 +185,7 @@ impl Application {
                     // read from lock_read for do something
                     // handle different TID/and something
                     CardTerminalRxCmd::ResponseTerminalInfo(TidStatus::Changed) => {
-                        hardware
-                            .card_reader
+                        card_reader
                             .send(CardTerminalTxCmd::RequestSaleSlotInfo)
                             .await;
                     }
@@ -207,18 +203,45 @@ impl Application {
                     #[cfg(feature = "svc_button")]
                     Ok(InputEvent {
                         port: InputPortKind::SvcButton,
-                        event: InputEventKind::LongPressed(t),
+                        event,
                     }) => {
-                        if (2 < t) && (t < 120) {
-                            hardware
-                                .card_reader
-                                .send(CardTerminalTxCmd::DisplayRom)
-                                .await;
-                        } else {
-                            hardware
-                                .card_reader
-                                .send(CardTerminalTxCmd::DisplayHwInfo)
-                                .await;
+                        match event {
+                            InputEventKind::Pressed => {
+                                is_svc_pressed = true;
+                                last_svc_pressed = Instant::now();
+                            }
+                            InputEventKind::LongPressed(t) => {
+                                if t < 2 {
+                                } else if (2 < t) && (t < 120) {
+                                    card_reader.send(CardTerminalTxCmd::DisplayRom).await;
+                                } else {
+                                    // Factory reset by SvcButton
+                                    // but this clear only 1/2p credit and coin count
+                                    if ((Instant::now() - last_svc_pressed)
+                                        > Duration::from_secs(10))
+                                        && is_svc_pressed
+                                    {
+                                        defmt::info!("Factory reset EEPROM");
+
+                                        card_reader
+                                            .send(CardTerminalTxCmd::DisplayWarning(
+                                                CardTerminalDisplayWarning::WarnEepromFactoryReset,
+                                            ))
+                                            .await;
+
+                                        eeprom.lock_write_zero(eeprom::select::P1_CARD_CNT).await;
+                                        eeprom.lock_write_zero(eeprom::select::P2_CARD_CNT).await;
+                                        eeprom.lock_write_zero(eeprom::select::P1_COIN_CNT).await;
+                                        eeprom.lock_write_zero(eeprom::select::P2_COIN_CNT).await;
+                                    } else {
+                                        card_reader.send(CardTerminalTxCmd::DisplayHwInfo).await;
+                                    }
+                                }
+                                is_svc_pressed = false;
+                            }
+                            InputEventKind::Released => {
+                                is_svc_pressed = false;
+                            }
                         }
 
                         yield_now().await;

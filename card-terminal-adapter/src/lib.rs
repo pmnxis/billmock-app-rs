@@ -107,6 +107,7 @@ pub enum CardTerminalDisplayWarning {
     RequireLatestTerminalVersion,
     WarnExperimentalVesion,
     WarnUnknown,
+    WarnEepromFactoryReset,
 }
 
 pub const TID_LEN: usize = 10;

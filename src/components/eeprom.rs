@@ -209,7 +209,7 @@ pub mod select {
 
 // #[async_trait]
 pub trait NovellaRw {
-    type InnerType: Sized;
+    type InnerType: Sized + Zeroable;
     async fn lock_read(
         &self,
         mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>,
@@ -220,6 +220,8 @@ pub trait NovellaRw {
         mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>,
         src: Self::InnerType,
     );
+
+    async fn lock_write_zero(&self, mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>);
 }
 
 fn should_not_happen() -> ! {
@@ -286,6 +288,23 @@ impl NovellaRw for NovellaSelector<u32> {
 
         cb.control_mut(self.section).set_dirty();
     }
+
+    async fn lock_write_zero(&self, mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>) {
+        let mut cb = mutex.lock().await;
+
+        *(match self.section {
+            NvMemSectionKind::P1CardCnt => &mut cb.data.p1_card_cnt,
+            NvMemSectionKind::P2CardCnt => &mut cb.data.p2_card_cnt,
+            NvMemSectionKind::P1CoinCnt => &mut cb.data.p1_coin_cnt,
+            NvMemSectionKind::P2CoinCnt => &mut cb.data.p2_coin_cnt,
+            NvMemSectionKind::HwBootCount => &mut cb.data.hw_boot_cnt,
+            _ => {
+                should_not_happen();
+            }
+        }) = Self::InnerType::zeroed();
+
+        cb.control_mut(self.section).set_dirty();
+    }
 }
 
 impl NovellaRw for NovellaSelector<FaultLog> {
@@ -319,6 +338,19 @@ impl NovellaRw for NovellaSelector<FaultLog> {
                 should_not_happen();
             }
         }
+
+        cb.control_mut(self.section).set_dirty();
+    }
+
+    async fn lock_write_zero(&self, mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>) {
+        let mut cb = mutex.lock().await;
+
+        *(match self.section {
+            NvMemSectionKind::FaultLog => &mut cb.data.fault_log,
+            _ => {
+                should_not_happen();
+            }
+        }) = Self::InnerType::zeroed();
 
         cb.control_mut(self.section).set_dirty();
     }
@@ -358,6 +390,19 @@ impl NovellaRw for NovellaSelector<RawTerminalId> {
 
         cb.control_mut(self.section).set_dirty();
     }
+
+    async fn lock_write_zero(&self, mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>) {
+        let mut cb = mutex.lock().await;
+
+        *(match self.section {
+            NvMemSectionKind::TerminalId => &mut cb.data.raw_terminal,
+            _ => {
+                should_not_happen();
+            }
+        }) = Self::InnerType::zeroed();
+
+        cb.control_mut(self.section).set_dirty();
+    }
 }
 
 impl NovellaRw for NovellaSelector<CardReaderPortBackup> {
@@ -391,6 +436,19 @@ impl NovellaRw for NovellaSelector<CardReaderPortBackup> {
                 should_not_happen();
             }
         };
+
+        cb.control_mut(self.section).set_dirty();
+    }
+
+    async fn lock_write_zero(&self, mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>) {
+        let mut cb = mutex.lock().await;
+
+        *(match self.section {
+            NvMemSectionKind::CardPortBackup => &mut cb.data.card_reader_port_backup,
+            _ => {
+                should_not_happen();
+            }
+        }) = Self::InnerType::zeroed();
 
         cb.control_mut(self.section).set_dirty();
     }
@@ -598,6 +656,13 @@ impl Novella {
         R: NovellaRw,
     {
         slot.lock_write(&self.mem_storage, src).await
+    }
+
+    pub async fn lock_write_zero<R>(&self, slot: R)
+    where
+        R: NovellaRw,
+    {
+        slot.lock_write_zero(&self.mem_storage).await
     }
 
     #[inline]
