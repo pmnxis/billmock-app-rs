@@ -209,7 +209,7 @@ pub mod select {
 
 // #[async_trait]
 pub trait NovellaRw {
-    type InnerType: Sized;
+    type InnerType: Sized + Zeroable;
     async fn lock_read(
         &self,
         mutex: &Mutex<ThreadModeRawMutex, NovellaModuleControlBlock>,
@@ -598,6 +598,14 @@ impl Novella {
         R: NovellaRw,
     {
         slot.lock_write(&self.mem_storage, src).await
+    }
+
+    pub async fn lock_reset_zero<R>(&self, slot: R)
+    where
+        R: NovellaRw,
+    {
+        slot.lock_write(&self.mem_storage, R::InnerType::zeroed())
+            .await
     }
 
     #[inline]
