@@ -229,10 +229,10 @@ impl Application {
                                             ))
                                             .await;
 
-                                        eeprom.lock_reset_zero(eeprom::select::P1_CARD_CNT).await;
-                                        eeprom.lock_reset_zero(eeprom::select::P2_CARD_CNT).await;
-                                        eeprom.lock_reset_zero(eeprom::select::P1_COIN_CNT).await;
-                                        eeprom.lock_reset_zero(eeprom::select::P2_COIN_CNT).await;
+                                        eeprom.lock_write_zero(eeprom::select::P1_CARD_CNT).await;
+                                        eeprom.lock_write_zero(eeprom::select::P2_CARD_CNT).await;
+                                        eeprom.lock_write_zero(eeprom::select::P1_COIN_CNT).await;
+                                        eeprom.lock_write_zero(eeprom::select::P2_COIN_CNT).await;
                                     } else {
                                         card_reader.send(CardTerminalTxCmd::DisplayHwInfo).await;
                                     }
