@@ -198,16 +198,17 @@ impl CardReaderDevice {
                                         Err(())
                                     }
                                 }
-                                CardTerminalRxCmd::ResponseTerminalInfo(_) => {
+                                CardTerminalRxCmd::ResponseTerminalInfo(_, _) => {
                                     let prev_tid =
                                         novella.lock_read(eeprom::select::TERMINAL_ID).await;
 
                                     let result = plug
                                         .post_parse_response_terminal_info(rx_source, &prev_tid);
                                     match result {
-                                        Ok((ret, _t_ver, tid)) => match ret {
+                                        Ok((ret, tid)) => match ret {
                                             CardTerminalRxCmd::ResponseTerminalInfo(
                                                 TidStatus::Changed,
+                                                _,
                                             ) => {
                                                 defmt::info!(
                                                     "tid : {=[u8]:a} -> {=[u8]:a}",
@@ -223,6 +224,7 @@ impl CardReaderDevice {
                                             }
                                             CardTerminalRxCmd::ResponseTerminalInfo(
                                                 TidStatus::Unchanged,
+                                                _,
                                             ) => {
                                                 defmt::info!(
                                                     "tid : {=[u8]:a} (Unchanged)",
