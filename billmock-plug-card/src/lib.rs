@@ -45,7 +45,7 @@ impl CardTerminalRxParse for KiccEd785Plug {
         &self,
         _raw: &[u8],
         _prev_terminal_id: &RawTerminalId,
-    ) -> Result<(CardTerminalRxCmd, TerminalVersion, RawTerminalId), CardTerminalError> {
+    ) -> Result<(CardTerminalRxCmd, RawTerminalId), CardTerminalError> {
         // implement me for actual usage
         Err(CardTerminalError::UnsupportedSpec)
     }

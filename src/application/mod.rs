@@ -184,7 +184,7 @@ impl Application {
                     }
                     // read from lock_read for do something
                     // handle different TID/and something
-                    CardTerminalRxCmd::ResponseTerminalInfo(TidStatus::Changed) => {
+                    CardTerminalRxCmd::ResponseTerminalInfo(TidStatus::Changed, _) => {
                         card_reader
                             .send(CardTerminalTxCmd::RequestSaleSlotInfo)
                             .await;

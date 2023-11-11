@@ -17,6 +17,7 @@ pub mod types;
 
 use types::*;
 
+#[derive(Debug, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum TerminalVersion {
     ArcadeSpecificLatest,
     ArcadeSpecificLegacy,
@@ -58,6 +59,7 @@ pub enum CardTerminalRxCmd {
     Ack,
     /// Nack signal
     Nack,
+    /// Request device information that related this board and firmware
     RequestDeviceInfo,
     /// For generic credit card terminal (not arcade specific customized version)
     AlertPaymentIncomePrice(RawU24Price),
@@ -69,7 +71,7 @@ pub enum CardTerminalRxCmd {
     /// 0xFB 0x14 0x02
     /// Detail pakcet data should be parsed with additional function call.
     /// using additional function call for avoid queue size being huge.
-    ResponseTerminalInfo(TidStatus),
+    ResponseTerminalInfo(TidStatus, TerminalVersion),
 }
 
 #[derive(PartialEq, Eq, Clone, defmt::Format)]
@@ -134,7 +136,7 @@ pub trait CardTerminalRxParse {
         &self,
         raw: &[u8],
         prev_terminal_id: &RawTerminalId,
-    ) -> Result<(CardTerminalRxCmd, TerminalVersion, RawTerminalId), CardTerminalError>;
+    ) -> Result<(CardTerminalRxCmd, RawTerminalId), CardTerminalError>;
 }
 
 pub trait CardTerminalTxGen {
