@@ -52,6 +52,7 @@ impl Application {
         let mut income_backup: Option<PaymentReceive> = None; // for StartButtonDecideSerialToVend
         let mut mutual_inhibit = MutualInhibit::new();
         let mut did_we_ask: u8 = 0;
+        let mut did_we_alert_version_warning = false;
         #[cfg(feature = "svc_button")]
         let (mut last_svc_pressed, mut is_svc_pressed): (Instant, bool) = (Instant::now(), false);
         #[cfg(feature = "svc_button")]
@@ -184,10 +185,36 @@ impl Application {
                     }
                     // read from lock_read for do something
                     // handle different TID/and something
-                    CardTerminalRxCmd::ResponseTerminalInfo(TidStatus::Changed, _) => {
-                        card_reader
-                            .send(CardTerminalTxCmd::RequestSaleSlotInfo)
-                            .await;
+                    CardTerminalRxCmd::ResponseTerminalInfo(tid_status, terminal_ver) => {
+                        if tid_status == TidStatus::Changed {
+                            card_reader
+                                .send(CardTerminalTxCmd::RequestSaleSlotInfo)
+                                .await;
+                        }
+
+                        if !did_we_alert_version_warning {
+                            if let Some(alert) = match terminal_ver {
+                                TerminalVersion::ArcadeSpecificLatest => None,
+                                TerminalVersion::ArcadeSpecificLegacy => {
+                                    Some(CardTerminalDisplayWarning::RequireLatestTerminalVersion)
+                                }
+                                TerminalVersion::GenericPriceIncomeType => {
+                                    Some(CardTerminalDisplayWarning::RequireArcadeSpecificVersion)
+                                }
+                                TerminalVersion::Experimental => {
+                                    Some(CardTerminalDisplayWarning::WarnExperimentalVesion)
+                                }
+                                TerminalVersion::Unknown => {
+                                    Some(CardTerminalDisplayWarning::WarnUnknown)
+                                }
+                            } {
+                                card_reader
+                                    .send(CardTerminalTxCmd::DisplayWarning(alert))
+                                    .await;
+
+                                did_we_alert_version_warning = true;
+                            }
+                        }
                     }
 
                     _ => {}
