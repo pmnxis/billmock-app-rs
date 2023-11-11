@@ -10,6 +10,8 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 - [DIP Switch Configuration](./dip_switch.md)
 - [Application Logic](./application.md)
     - [`DisplayRom` feature](./feature_disp_rom.md)
+    - [`DisplayHwInfo` feature](./feature_disp_hw_info.md)
+    - [`Counter Reset` feature](./feature_counter_reset.md)
 - [Machine installation](./installation.md)
 - [Hardware and pin-map](./port_overview.md)
     - [BillMock Mini (Rectangular)](./port_04_mini_overview.md)

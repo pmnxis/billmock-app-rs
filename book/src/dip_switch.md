@@ -81,5 +81,7 @@ of a device that has under the maintenance in the field engineer.
 - `11`: DisplayRom
     > ![display rom screen](https://billmock.gpark.biz/images/dip_switch_rom_disp_enus.png)
     > - It displays information about BillMock's firmware, the card terminal's TID, and accumulated card and bill (coin) counts. It can be used as an alternative to a magnetic coin meter.
+    > - Upon exiting this mode, [DisplayHwInfo](./feature_disp_hw_info.md) will display hardware information.
+    > - When the SVC button is held for more than 10 seconds, the counts are reset to 0 through the [Counter Reset](./feature_counter_reset.md) feature.
     > - If the connected card terminal's TID changes, the accumulated card count will be reset to 0.
-    > For detailed information, please refer to [DisplayRom Detailed Information](./feature_disp_rom.md).\
+    > For detailed information, please refer to [DisplayRom Detailed Information](./feature_disp_rom.md).

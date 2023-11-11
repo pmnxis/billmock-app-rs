@@ -32,3 +32,6 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 - All count numbers are displayed in 6 digits (0 ~ 999,999). If the count exceeds 1,000,000, it will be displayed as 000,000, and the next count after that will increment normally, such as 000,001.
 
 - This feature is available starting from firmware version `0.2.0` and hardware `0.4` or `Mini 0.4` and later. It is not available for previous hardware versions.
+
+- From hardware version 0.5 or Mini 0.5 onwards, you can use the SVC button by pressing it briefly.
+  > ![svc button](https://billmock.gpark.biz/images/svc_button.jpg)

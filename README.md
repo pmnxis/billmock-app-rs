@@ -39,7 +39,11 @@ cargo build --features hw_mini_0v4 --no-default-features --release
 ```
 
 ### Target hardware image
-![Actual BillMock PCB 0v3](https://billmock.gpark.biz/images/BillMockPCB_0v4.jpg)
+![Actual BillMock PCB 0v5](https://billmock.gpark.biz/images/BillMockPCB_0v5_mini.jpg)
+The hardware revision currently adopted for final mass production is 0.5-MINI, and the software development is also progressing according to this version.
+
+![Actual BillMock PCB 0v4](https://billmock.gpark.biz/images/BillMockPCB_0v4.jpg)
+Old revisions.
 
 ### Hardware design
 BillMock hardware schematic repository (only pdf)

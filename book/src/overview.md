@@ -13,8 +13,11 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 To configure it for desired settings on-site, "Billmock" allows preconfigured I/O remapping adjustments through DIP switches. In terms of wiring, it is installed between the HOST GAME PCB and the bill acceptor device.
 
 ## Hardware
-![Actual BillMock PCB 0v3](https://billmock.gpark.biz/images/BillMockPCB_0v4.jpg)
-There are currently three hardware revisions available: 0.2, 0.3, and 0.4. The development is focused on compatibility with versions 0.3 and 0.4, which are the ones actively in use. Detailed hardware schematics are here
+![Actual BillMock PCB 0v5](https://billmock.gpark.biz/images/BillMockPCB_0v5_mini.jpg)
+The hardware revision currently adopted for final mass production is 0.5-MINI, and the software development is also progressing according to this version.
+
+![Actual BillMock PCB 0v4](https://billmock.gpark.biz/images/BillMockPCB_0v4.jpg)
+There are three previous hardware revisions available: 0.2, 0.3, and 0.4. The development is focused on compatibility with versions 0.3 and 0.4, which are the ones actively in use. Detailed hardware schematics are here
 [BillMock-HW-RELEASE](https://github.com/pmnxis/BillMock-HW-RELEASE)
 
 ## Application
