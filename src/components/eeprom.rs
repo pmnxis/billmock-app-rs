@@ -207,7 +207,7 @@ pub mod select {
     };
 }
 
-// #[async_trait]
+#[allow(async_fn_in_trait)]
 pub trait NovellaRw {
     type InnerType: Sized + Zeroable;
     async fn lock_read(

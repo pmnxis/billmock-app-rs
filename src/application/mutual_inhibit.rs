@@ -116,6 +116,7 @@ impl InputEvent {
         *self
     }
 
+    #[allow(unused)]
     pub fn test_mut_inh_then_ignore(&self, mut_inh: &mut MutualInhibit) -> Self {
         if let Some((player, status)) = {
             if matches!(self.event, InputEventKind::LongPressed(_)) {

@@ -13,12 +13,13 @@ mod player_to_vend_led;
 use card_terminal_adapter::types::*;
 use card_terminal_adapter::*;
 use embassy_futures::yield_now;
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::{Duration, Timer};
 use io_card::PaymentReceive;
+#[cfg(feature = "svc_button")]
+use {crate::components::eeprom, embassy_time::Instant};
 
 use self::mutual_inhibit::MutualInhibit;
 use crate::boards::*;
-use crate::components::eeprom;
 use crate::semi_layer;
 use crate::semi_layer::buffered_wait::InputEventKind;
 use crate::types::dip_switch_config::{AppMode0V3, TimingOverride};
