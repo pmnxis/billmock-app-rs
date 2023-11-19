@@ -8,6 +8,7 @@
 #![no_std]
 #![feature(const_trait_impl)]
 #![feature(async_fn_in_trait)]
+#![allow(stable_features)]
 #![feature(type_alias_impl_trait)]
 #![feature(effects)] // see : https://github.com/rust-lang/rust/issues/114808
 
