@@ -111,18 +111,17 @@ impl Application {
             if let Ok(x) = card_reader.recv_channel.try_receive() {
                 match x {
                     CardTerminalRxCmd::RequestDeviceInfo => {
+                        did_we_ask = did_we_ask.checked_add(1).unwrap_or(u8::MAX);
+
                         card_reader
                             .send(CardTerminalTxCmd::ResponseDeviceInfo)
                             .await;
 
-                        // todo! - don't care did_we_ask var, and just backup PortBackup always for inhibit action.
-                        if (did_we_ask & 0b111) == 0 {
-                            card_reader
-                                .send(CardTerminalTxCmd::RequestTerminalInfo)
-                                .await;
-                        }
+                        defmt::info!("Card Terminal asked {} times", did_we_ask);
 
-                        did_we_ask += 1;
+                        card_reader
+                            .send(CardTerminalTxCmd::RequestTerminalInfo)
+                            .await;
                     }
                     CardTerminalRxCmd::AlertPaymentIncomeArcade(raw_income) => {
                         // judge current application mode and income backup
