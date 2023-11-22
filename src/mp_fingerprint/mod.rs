@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-//! This code is not reflected on program binrary or actual memory.
+//! This code is not reflected on program binary or actual memory.
 //! .mp_fingerprint section is `NOLOAD` and `READONLY` section that
 //! virtually existed in ELF header.
 //! The contents of .mp_fingerprint would be used for billmock-mptool
@@ -17,6 +17,7 @@
 //! #[no_mangle]
 //! #[link_section = ".mp_fingerprint"]
 //! static TEST_FINGER: [u8; 14] = *b"SOME TOML HERE";
+//! ```
 
 use env_to_array::patch_linker_section_from_hex_env;
 
