@@ -33,7 +33,7 @@ use crate::types::player::Player;
 
 bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
-    I2C1 => embassy_stm32::i2c::InterruptHandler<peripherals::I2C1>;
+    I2C1 => embassy_stm32::i2c::EventInterruptHandler<peripherals::I2C1>, embassy_stm32::i2c::ErrorInterruptHandler<peripherals::I2C1>;
 });
 
 static mut USART2_RX_BUF: [u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE] =
@@ -44,7 +44,7 @@ pub fn hardware_init_mini_0v5(
     shared_resource: &'static SharedResource,
 ) -> Hardware {
     // USART2 initialization for CardReaderDevice
-    let usart2_rx_buf = unsafe { &mut USART2_RX_BUF };
+    let usart2_rx_buf = unsafe { &mut *core::ptr::addr_of_mut!(USART2_RX_BUF) };
 
     let usart2_config = {
         let mut ret: UsartConfig = UsartConfig::default();
