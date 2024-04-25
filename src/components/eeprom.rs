@@ -513,7 +513,6 @@ const PAGE_SHIFT: usize = 4;
 const SECTION_NUM: usize = 8;
 const ROM_7B_ADDRESS: u8 = 0b1010000; // Embassy require 7bits address as parameter.
                                       // const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
-const WAIT_DURATION_PER_PAGE: Duration = Duration::from_millis(20); // heuristic value
 const CHECKSUM_SIZE: usize = core::mem::size_of::<Checksum>();
 const UPTIME_SIZE: usize = core::mem::size_of::<Duration>();
 const TOTAL_SLOT_NUM: usize = 96; // should be calculated in compile time
