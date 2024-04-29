@@ -513,7 +513,6 @@ const PAGE_SHIFT: usize = 4;
 const SECTION_NUM: usize = 8;
 const ROM_7B_ADDRESS: u8 = 0b1010000; // Embassy require 7bits address as parameter.
                                       // const ROM_ADDRESS_FIELD_SIZE: usize = core::mem::size_of::<u8>();
-const WAIT_DURATION_PER_PAGE: Duration = Duration::from_millis(20); // heuristic value
 const CHECKSUM_SIZE: usize = core::mem::size_of::<Checksum>();
 const UPTIME_SIZE: usize = core::mem::size_of::<Duration>();
 const TOTAL_SLOT_NUM: usize = 96; // should be calculated in compile time
@@ -732,18 +731,14 @@ impl Novella {
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
             // blocking function can detect NACK, but async type does not
-            bus.blocking_write_read_timeout(
-                i2c_address,
-                &data_address_slice,
-                rx_buffer,
-                WAIT_DURATION_PER_PAGE,
-            )
-            .map_err(|e| match e {
-                embassy_stm32::i2c::Error::Timeout | embassy_stm32::i2c::Error::Nack => {
-                    NovellaReadError::MissingEeprom
-                }
-                _ => NovellaReadError::Unknown,
-            })?;
+            // WAIT_DURATION_PER_PAGE,
+            bus.blocking_write_read(i2c_address, &data_address_slice, rx_buffer)
+                .map_err(|e| match e {
+                    embassy_stm32::i2c::Error::Timeout | embassy_stm32::i2c::Error::Nack => {
+                        NovellaReadError::MissingEeprom
+                    }
+                    _ => NovellaReadError::Unknown,
+                })?;
 
             if Self::consider_initial_uptime(page_idx) {
                 // Grab time::Duration of slot
@@ -885,10 +880,10 @@ impl Novella {
 
             self.clr_write_protect();
 
-            match bus.blocking_write_timeout(
+            // WAIT_DURATION_PER_PAGE,
+            match bus.blocking_write(
                 i2c_address,
                 unsafe { &*self.buffer.get() }, // when page is 16, include 1+16 byte will be tx.
-                WAIT_DURATION_PER_PAGE,
             ) {
                 Ok(_) => {}
                 Err(e) => {
@@ -922,16 +917,12 @@ impl Novella {
             // #[cfg(i2c_addr_bits_include_msb)]
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            bus.blocking_write_read_timeout(
-                i2c_address,
-                addr_buffer,
-                data_buffer,
-                WAIT_DURATION_PER_PAGE,
-            )
-            .map_err(|e| match e {
-                embassy_stm32::i2c::Error::Timeout => NovellaWriteError::MissingEeprom,
-                _ => NovellaWriteError::Unknown,
-            })?;
+            // WAIT_DURATION_PER_PAGE,
+            bus.blocking_write_read(i2c_address, addr_buffer, data_buffer)
+                .map_err(|e| match e {
+                    embassy_stm32::i2c::Error::Timeout => NovellaWriteError::MissingEeprom,
+                    _ => NovellaWriteError::Unknown,
+                })?;
 
             if Self::consider_initial_uptime(page_idx) {
                 // Grab time::Duration of slot
@@ -1080,10 +1071,10 @@ impl Novella {
 
             self.clr_write_protect();
 
-            match bus.blocking_write_timeout(
+            // WAIT_DURATION_PER_PAGE,
+            match bus.blocking_write(
                 i2c_address,
                 unsafe { &*self.buffer.get() }, // when page is 16, include 1+16 byte will be tx.
-                WAIT_DURATION_PER_PAGE,
             ) {
                 Ok(_) => {}
                 Err(e) => {
@@ -1118,16 +1109,12 @@ impl Novella {
             // #[cfg(i2c_addr_bits_include_msb)]
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            bus.blocking_write_read_timeout(
-                i2c_address,
-                addr_buffer,
-                data_buffer,
-                WAIT_DURATION_PER_PAGE,
-            )
-            .map_err(|e| match e {
-                embassy_stm32::i2c::Error::Timeout => NovellaWriteError::MissingEeprom,
-                _ => NovellaWriteError::Unknown,
-            })?;
+            // WAIT_DURATION_PER_PAGE,
+            bus.blocking_write_read(i2c_address, addr_buffer, data_buffer)
+                .map_err(|e| match e {
+                    embassy_stm32::i2c::Error::Timeout => NovellaWriteError::MissingEeprom,
+                    _ => NovellaWriteError::Unknown,
+                })?;
 
             if Self::consider_initial_uptime(page_idx) {
                 // Grab time::Duration of slot
@@ -1337,11 +1324,8 @@ impl Novella {
             // #[cfg(i2c_addr_bits_include_msb)]
             let i2c_address = ROM_7B_ADDRESS | ((raw_addr >> 8) as DevSelAddress & 0x7);
 
-            let result = bus.blocking_write_timeout(
-                i2c_address,
-                unsafe { &*self.buffer.get() },
-                WAIT_DURATION_PER_PAGE,
-            );
+            // WAIT_DURATION_PER_PAGE,
+            let result = bus.blocking_write(i2c_address, unsafe { &*self.buffer.get() });
 
             delay_write_time_blocking();
         }
