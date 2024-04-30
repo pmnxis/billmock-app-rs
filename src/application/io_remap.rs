@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
+use card_terminal_adapter::CardTerminalTxCmd;
+
 use super::io_bypass::io_bypass;
 use crate::boards::*;
 use crate::components::eeprom;
@@ -145,6 +147,24 @@ impl InputEvent {
                     .lock_write(eeprom::select::P1_COIN_CNT, new_count)
                     .await;
 
+                if let Some(assume_report) = board
+                    .hardware
+                    .eeprom
+                    .lock_read(eeprom::select::CARD_PORT_BACKUP)
+                    .await
+                    .guess_raw_income_by_player(PLAYER_1_INDEX as u8)
+                {
+                    board
+                        .hardware
+                        .card_reader
+                        .send(CardTerminalTxCmd::PushCoinPaperAcceptorIncome(
+                            assume_report.clone(),
+                        ))
+                        .await;
+                } else {
+                    defmt::info!("P1 cash receipt could not be requested");
+                }
+
                 defmt::info!("P1_COIN_CNT, {} -> {}", count, new_count);
             }
             (InputPortKind::Vend2P, InputEventKind::LongPressed(_)) => {
@@ -160,6 +180,24 @@ impl InputEvent {
                     .eeprom
                     .lock_write(eeprom::select::P2_COIN_CNT, new_count)
                     .await;
+
+                if let Some(assume_report) = board
+                    .hardware
+                    .eeprom
+                    .lock_read(eeprom::select::CARD_PORT_BACKUP)
+                    .await
+                    .guess_raw_income_by_player(PLAYER_2_INDEX as u8)
+                {
+                    board
+                        .hardware
+                        .card_reader
+                        .send(CardTerminalTxCmd::PushCoinPaperAcceptorIncome(
+                            assume_report.clone(),
+                        ))
+                        .await;
+                } else {
+                    defmt::info!("P2 cash receipt could not be requested");
+                }
 
                 defmt::info!("P2_COIN_CNT, {} -> {}", count, new_count);
             }

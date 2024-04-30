@@ -122,6 +122,10 @@ impl Application {
                         card_reader
                             .send(CardTerminalTxCmd::RequestTerminalInfo)
                             .await;
+
+                        card_reader
+                            .send(CardTerminalTxCmd::RequestSaleSlotInfo)
+                            .await;
                     }
                     CardTerminalRxCmd::AlertPaymentIncomeArcade(raw_income) => {
                         // judge current application mode and income backup

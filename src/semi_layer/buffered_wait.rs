@@ -67,7 +67,7 @@ impl From<InputEventKind> for RawInputEventKind {
         match value {
             InputEventKind::Released => 0x00,
             InputEventKind::Pressed => 0x1 << 7,
-            InputEventKind::LongPressed(x) => (0x1 << 7) | x.max(1).min(TINY_LONG_PRESS_MAX),
+            InputEventKind::LongPressed(x) => (0x1 << 7) | x.clamp(1, TINY_LONG_PRESS_MAX),
         }
     }
 }

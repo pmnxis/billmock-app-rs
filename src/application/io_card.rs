@@ -47,7 +47,7 @@ impl PaymentReceive {
     pub async fn apply_output(self, board: &'static Board, override_druation_force: bool) -> Self {
         let player = {
             defmt::debug!("port 0x{:02X}", self.recv.port);
-            let temp = (self.recv.port.max(1).min(4) - 1) & 0x1;
+            let temp = (self.recv.port.clamp(1, 4) - 1) & 0x1;
 
             match temp {
                 0 => Player::Player1,

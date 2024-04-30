@@ -89,6 +89,7 @@ pub enum CardTerminalTxCmd {
     /// Overwrite sale slot info to card terminal
     /// It's for rollback or treat as inihibit action
     PushSaleSlotInfo,
+    /// [Deprecated]
     /// Mixed request of PushSaleSlotInfo,
     /// Unfortunately, this feature is still unstable due to sequence logic issues
     /// in the real environment. Therefore, we do not recommend using it at this time.
