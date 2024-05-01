@@ -246,4 +246,10 @@ impl CardReaderPortBackup {
     }
 }
 
+#[derive(Debug, Zeroable, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct PulseStateRequest {
+    pub port: u8,
+    pub state: bool,
+}
+
 assert_eq_size!(CardReaderPortBackup, [u8; 32]);

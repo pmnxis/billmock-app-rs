@@ -72,6 +72,8 @@ pub enum CardTerminalRxCmd {
     /// Detail pakcet data should be parsed with additional function call.
     /// using additional function call for avoid queue size being huge.
     ResponseTerminalInfo(TidStatus, TerminalVersion),
+    /// Set Pulse State
+    RequestKeepPulseState(PulseStateRequest),
 }
 
 #[derive(PartialEq, Eq, Clone, defmt::Format)]

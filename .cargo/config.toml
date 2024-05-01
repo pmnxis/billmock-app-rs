@@ -26,9 +26,7 @@ target = "thumbv6m-none-eabi"
 # the project follows a re-patching approach for incorporating the library source code
 # from the local environment into the actual open-source build.
 [patch.'https://github.com/pmnxis/billmock-app-rs.git']
-# billmock-plug-card = { path = "billmock-plug-card" }
-billmock-plug-card = { path = "../billmock-plug-ed785" }
-
+billmock-plug-card = { path = "billmock-plug-card" }
 
 # Custom println! To use formatting, use the latest branch.
 # [patch.crates-io]
