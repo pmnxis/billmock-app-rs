@@ -99,6 +99,11 @@ impl CardTerminalTxGen for KiccEd785Plug {
         &buffer[0..0]
     }
 
+    fn push_transaction_availability<'a>(&self, buffer: &'a mut [u8], _is_avail: bool) -> &'a [u8] {
+        // implement me for actual usage
+        &buffer[0..0]
+    }
+
     fn request_sale_slot_info<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8] {
         // implement me for actual usage
         &buffer[0..0]

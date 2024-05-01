@@ -96,6 +96,9 @@ pub enum CardTerminalTxCmd {
     /// Unfortunately, this feature is still unstable due to sequence logic issues
     /// in the real environment. Therefore, we do not recommend using it at this time.
     PushSaleSlotInfoPartialInhibit(RawPlayersInhibit),
+    /// Set availability of transactions
+    /// New method instead of PushSaleSlotInfoPartialInhibit
+    SetTransactionAvailability(bool),
     /// Request terminal info, include TID, terminal program version etc.
     RequestTerminalInfo,
     /// Display ROM (P1/P2 Card and Coin Meter)
@@ -173,6 +176,7 @@ pub trait CardTerminalTxGen {
         port_backup: &CardReaderPortBackup,
     ) -> &'a [u8];
 
+    /// [Deprecated]
     /// Generate PushSaleSlotInfoPartialInhibit signal to send
     /// This action send with modificated slots to inhibit sale slot for inhibit behavior
     fn push_sale_slot_info_partial_inhibit<'a>(
@@ -180,6 +184,10 @@ pub trait CardTerminalTxGen {
         buffer: &'a mut [u8],
         port_backup: &CardReaderPortBackup,
     ) -> &'a [u8];
+
+    /// Generate SetTransactionAvailability signal to send
+    /// This is inversed boolean of SetInhibit
+    fn push_transaction_availability<'a>(&self, buffer: &'a mut [u8], is_avail: bool) -> &'a [u8];
 
     /// Generate RequestSaleSlotInfo signal to send
     fn request_sale_slot_info<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];

@@ -113,6 +113,9 @@ impl CardReaderDevice {
 
                             ret
                         }
+                        CardTerminalTxCmd::SetTransactionAvailability(is_avail) => {
+                            plug.push_transaction_availability(&mut tx_buf, is_avail)
+                        }
                         CardTerminalTxCmd::RequestSaleSlotInfo => {
                             plug.request_sale_slot_info(&mut tx_buf)
                         }
