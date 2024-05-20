@@ -308,6 +308,12 @@ impl CardReaderDevice {
             .send(CardTerminalTxCmd::PushSaleSlotInfoPartialInhibit(inhibit))
             .await;
     }
+
+    pub async fn send_transaction_availability(&self, is_avail: bool) {
+        self.req_channel
+            .send(CardTerminalTxCmd::SetTransactionAvailability(is_avail))
+            .await;
+    }
 }
 
 // in HW v0.2 pool usage would be 1.

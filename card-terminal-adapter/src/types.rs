@@ -77,6 +77,10 @@ impl RawU24IncomeArcade {
     pub fn get_port_num(&self) -> u8 {
         self.0[0] >> 4
     }
+
+    pub fn get_pulse_count(&self) -> u16 {
+        (((self.0[0] & 0x0F) as u16) << 6) | (self.0[1] >> 2) as u16
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, defmt::Format)]

@@ -9,6 +9,7 @@ mod io_card;
 mod io_remap;
 mod mutual_inhibit;
 mod player_to_vend_led;
+mod pulse_meory_filter;
 
 use card_terminal_adapter::types::*;
 use card_terminal_adapter::*;
@@ -18,7 +19,7 @@ use io_card::PaymentReceive;
 #[cfg(feature = "svc_button")]
 use {crate::components::eeprom, embassy_time::Instant};
 
-use self::mutual_inhibit::MutualInhibit;
+use self::{mutual_inhibit::MutualInhibit, pulse_meory_filter::PulseMemoryFilterMachine};
 use crate::boards::*;
 use crate::semi_layer;
 use crate::semi_layer::buffered_wait::InputEventKind;
@@ -54,6 +55,7 @@ impl Application {
         let mut mutual_inhibit = MutualInhibit::new();
         let mut did_we_ask: u8 = 0;
         let mut did_we_alert_version_warning = false;
+        let mut filter_state = PulseMemoryFilterMachine::new();
         #[cfg(feature = "svc_button")]
         let (mut last_svc_pressed, mut is_svc_pressed): (Instant, bool) = (Instant::now(), false);
         #[cfg(feature = "svc_button")]
@@ -297,7 +299,7 @@ impl Application {
                             })
                             .test_mut_inh_early_output(&mut mutual_inhibit, board)
                             .await
-                            .apply_output(board, timing.is_override_force())
+                            .apply_output(board, &mut filter_state, timing.is_override_force())
                             .await;
 
                         Some(ret)
@@ -308,6 +310,8 @@ impl Application {
                     }
                 }
             } else {
+                filter_state.report_when_expired(board).await;
+
                 None
             };
 

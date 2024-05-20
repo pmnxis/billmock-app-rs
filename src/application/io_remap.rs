@@ -4,9 +4,8 @@
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
 
-use card_terminal_adapter::CardTerminalTxCmd;
-
 use super::io_bypass::io_bypass;
+use super::pulse_meory_filter::PulseMemoryFilterMachine;
 use crate::boards::*;
 use crate::components::eeprom;
 use crate::semi_layer::buffered_wait::InputEventKind;
@@ -131,77 +130,33 @@ impl InputEvent {
         }
     }
 
-    pub async fn apply_output(&self, board: &'static Board, override_druation_force: bool) -> Self {
-        match (self.port, self.event) {
-            (InputPortKind::Vend1P, InputEventKind::LongPressed(_)) => {
-                let count = board
-                    .hardware
-                    .eeprom
-                    .lock_read(eeprom::select::P1_COIN_CNT)
-                    .await;
-                let new_count = count + 1;
+    pub async fn apply_output(
+        &self,
+        board: &'static Board,
+        filter_state: &mut PulseMemoryFilterMachine,
+        override_druation_force: bool,
+    ) -> Self {
+        if let Some((player_index, rom_sel, time_in_10ms)) = match (self.port, self.event) {
+            (InputPortKind::Vend1P, InputEventKind::LongPressed(time_in_10ms)) => Some((
+                PLAYER_1_INDEX as u8,
+                eeprom::select::P1_COIN_CNT,
+                time_in_10ms,
+            )),
+            (InputPortKind::Vend2P, InputEventKind::LongPressed(time_in_10ms)) => Some((
+                PLAYER_2_INDEX as u8,
+                eeprom::select::P2_COIN_CNT,
+                time_in_10ms,
+            )),
+            _ => None,
+        } {
+            let count = board.hardware.eeprom.lock_read(rom_sel).await;
+            let new_count = count + 1;
 
-                board
-                    .hardware
-                    .eeprom
-                    .lock_write(eeprom::select::P1_COIN_CNT, new_count)
-                    .await;
+            board.hardware.eeprom.lock_write(rom_sel, new_count).await;
 
-                if let Some(assume_report) = board
-                    .hardware
-                    .eeprom
-                    .lock_read(eeprom::select::CARD_PORT_BACKUP)
-                    .await
-                    .guess_raw_income_by_player(PLAYER_1_INDEX as u8)
-                {
-                    board
-                        .hardware
-                        .card_reader
-                        .send(CardTerminalTxCmd::PushCoinPaperAcceptorIncome(
-                            assume_report.clone(),
-                        ))
-                        .await;
-                } else {
-                    defmt::info!("P1 cash receipt could not be requested");
-                }
+            let timing_in_ms = (time_in_10ms as u16) * 10;
 
-                defmt::info!("P1_COIN_CNT, {} -> {}", count, new_count);
-            }
-            (InputPortKind::Vend2P, InputEventKind::LongPressed(_)) => {
-                let count = board
-                    .hardware
-                    .eeprom
-                    .lock_read(eeprom::select::P2_COIN_CNT)
-                    .await;
-                let new_count = count + 1;
-
-                board
-                    .hardware
-                    .eeprom
-                    .lock_write(eeprom::select::P2_COIN_CNT, new_count)
-                    .await;
-
-                if let Some(assume_report) = board
-                    .hardware
-                    .eeprom
-                    .lock_read(eeprom::select::CARD_PORT_BACKUP)
-                    .await
-                    .guess_raw_income_by_player(PLAYER_2_INDEX as u8)
-                {
-                    board
-                        .hardware
-                        .card_reader
-                        .send(CardTerminalTxCmd::PushCoinPaperAcceptorIncome(
-                            assume_report.clone(),
-                        ))
-                        .await;
-                } else {
-                    defmt::info!("P2 cash receipt could not be requested");
-                }
-
-                defmt::info!("P2_COIN_CNT, {} -> {}", count, new_count);
-            }
-            _ => {}
+            filter_state.player[player_index as usize].mark(timing_in_ms);
         }
 
         if self.port != InputPortKind::Nothing {

@@ -100,9 +100,9 @@ pub struct MemStorage {
 
 /// Tiny control block for manage single section, it include what page is longest and is dirty state
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
-/// | b7 |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
+/// | b7  |  b6 |  b5 |  b4 |  b3 |  b2 |  b1 |  b0 |
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
-/// |dirty|  robin: number of what page is longest   |
+/// |dirty|  robin: number of what page is longest  |
 /// +-----+-----+-----+-----+-----+-----+-----+-----+
 #[derive(Zeroable, Clone, Copy)]
 pub struct NovellaSectionControlBlock {
