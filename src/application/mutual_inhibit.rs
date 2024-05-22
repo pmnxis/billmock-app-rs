@@ -5,7 +5,6 @@
  */
 
 use bit_field::BitField;
-use card_terminal_adapter::types::RawPlayersInhibit;
 
 use crate::boards::{Board, PLAYER_1_INDEX, PLAYER_2_INDEX};
 use crate::semi_layer::buffered_wait::InputEventKind;
@@ -69,6 +68,8 @@ impl MutualInhibit {
     }
 
     pub async fn test_and_apply_output(&mut self, board: &Board) {
+        // use card_terminal_adapter::types::RawPlayersInhibit;
+
         let inhibit_1p = &board.hardware.vend_sides[PLAYER_1_INDEX].out_inhibit;
         let inhibit_2p = &board.hardware.vend_sides[PLAYER_2_INDEX].out_inhibit;
         let serial_credit = &board.hardware.card_reader;
@@ -81,9 +82,15 @@ impl MutualInhibit {
             inhibit_1p.set_level(p1).await;
             inhibit_2p.set_level(p2).await;
 
-            serial_credit
-                .send_inhibit(RawPlayersInhibit { p1, p2 })
-                .await;
+            // serial_credit
+            //     .send_inhibit(RawPlayersInhibit { p1, p2 })
+            //     .await;
+
+            if InhibitOverride::ForceInhibitGlobal == x {
+                serial_credit.send_transaction_availability(false).await;
+            } else {
+                serial_credit.send_transaction_availability(true).await;
+            }
         }
     }
 }

@@ -113,6 +113,9 @@ impl CardReaderDevice {
 
                             ret
                         }
+                        CardTerminalTxCmd::SetTransactionAvailability(is_avail) => {
+                            plug.push_transaction_availability(&mut tx_buf, is_avail)
+                        }
                         CardTerminalTxCmd::RequestSaleSlotInfo => {
                             plug.request_sale_slot_info(&mut tx_buf)
                         }
@@ -270,7 +273,9 @@ impl CardReaderDevice {
                                 CardTerminalError::BadLength | CardTerminalError::InvalidFrame => {
                                     stacked += rx_len;
                                 }
-                                _ => {}
+                                _ => {
+                                    defmt::debug!("Rx Buf : {:#X}", rx_source);
+                                }
                             }
                         }
                     }
@@ -303,6 +308,12 @@ impl CardReaderDevice {
     pub async fn send_inhibit(&self, inhibit: RawPlayersInhibit) {
         self.req_channel
             .send(CardTerminalTxCmd::PushSaleSlotInfoPartialInhibit(inhibit))
+            .await;
+    }
+
+    pub async fn send_transaction_availability(&self, is_avail: bool) {
+        self.req_channel
+            .send(CardTerminalTxCmd::SetTransactionAvailability(is_avail))
             .await;
     }
 }

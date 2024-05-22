@@ -77,6 +77,10 @@ impl RawU24IncomeArcade {
     pub fn get_port_num(&self) -> u8 {
         self.0[0] >> 4
     }
+
+    pub fn get_pulse_count(&self) -> u16 {
+        (((self.0[0] & 0x0F) as u16) << 6) | (self.0[1] >> 2) as u16
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, defmt::Format)]
@@ -98,6 +102,7 @@ pub struct RawPortPulseCountDuration {
     pub inner: u32,
 }
 
+#[derive(defmt::Format)]
 pub struct SlotPriceGameNum {
     pub price: u32,
     pub game_num: u16,
@@ -124,6 +129,13 @@ impl From<RawU32SlotPriceGameNum> for SlotPriceGameNum {
     }
 }
 
+impl defmt::Format for RawU32SlotPriceGameNum {
+    fn format(&self, fmt: defmt::Formatter) {
+        let degrade = SlotPriceGameNum::from(self.clone());
+        defmt::write!(fmt, "{:?}", degrade);
+    }
+}
+
 impl RawU32SlotPriceGameNum {
     pub fn get_game_num(&self) -> u16 {
         (self.0 & ((1 << 10) - 1)) as u16
@@ -131,14 +143,14 @@ impl RawU32SlotPriceGameNum {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Zeroable, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Zeroable, PartialEq, PartialOrd, defmt::Format)]
 pub enum SlotProperty {
     Disabled,
     Enabled,
     TemporaryDisabled,
 }
 
-#[derive(Clone, Zeroable)]
+#[derive(Clone, Zeroable, defmt::Format)]
 pub struct RawCardPortBackup {
     // is enabled?
     pub property: SlotProperty,
@@ -167,7 +179,7 @@ impl RawCardPortBackup {
     }
 }
 
-#[derive(Clone, Zeroable)]
+#[derive(Clone, Zeroable, defmt::Format)]
 pub struct CardReaderPortBackup {
     pub raw_card_port_backup: [RawCardPortBackup; 4],
 }
@@ -175,6 +187,23 @@ pub struct CardReaderPortBackup {
 impl CardReaderPortBackup {
     pub fn empty_slot() -> Self {
         Self::zeroed()
+    }
+
+    pub fn is_zeroed(&self) -> bool {
+        unsafe {
+            let cast: &[u8] = core::slice::from_raw_parts(
+                (self as *const _) as *const u8,
+                core::mem::size_of::<CardReaderPortBackup>(),
+            );
+
+            for each in cast {
+                if *each != 0 {
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 
     // 0 is player 1, <- this is temporary decide,
@@ -194,6 +223,39 @@ impl CardReaderPortBackup {
         0
     }
 
+    // player 1 port is generally 1
+    // player 2 port is generally 2
+    pub fn guess_raw_income_by_player(&self, player: u8) -> Option<&RawU24IncomeArcade> {
+        for backup in &self.raw_card_port_backup {
+            if backup.property != SlotProperty::Enabled {
+                continue;
+            }
+
+            let game_num = backup.raw_extended.get_game_num();
+            if (game_num == player as u16) || (game_num == (player + 2) as u16) {
+                return Some(&backup.raw_minimum);
+            }
+        }
+
+        None
+    }
+
+    // index should be u8 but to reduce size use u8. Index gurantee less than 256.
+    pub fn guess_raw_income_index_by_player(&self, player: u8) -> Option<u8> {
+        for (pos, backup) in self.raw_card_port_backup.iter().enumerate() {
+            if backup.property != SlotProperty::Enabled {
+                continue;
+            }
+
+            let game_num = backup.raw_extended.get_game_num();
+            if (game_num == player as u16) || (game_num == (player + 2) as u16) {
+                return Some(pos as u8);
+            }
+        }
+
+        None
+    }
+
     pub fn set_inhibit(&mut self, inhibit: RawPlayersInhibit) {
         for i in 0..self.raw_card_port_backup.len() {
             let is_disabled = self.raw_card_port_backup[i].property == SlotProperty::Disabled;
@@ -209,6 +271,12 @@ impl CardReaderPortBackup {
             }
         }
     }
+}
+
+#[derive(Debug, Zeroable, defmt::Format, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub struct PulseStateRequest {
+    pub port: u8,
+    pub state: bool,
 }
 
 assert_eq_size!(CardReaderPortBackup, [u8; 32]);

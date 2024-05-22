@@ -15,6 +15,7 @@ use embassy_stm32::i2c::I2c;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::{Config as UsartConfig, Uart};
 use embassy_stm32::{bind_interrupts, peripherals};
+use embassy_time::Duration;
 use {defmt_rtt as _, panic_probe as _};
 
 use super::{Hardware, SharedResource};
@@ -31,11 +32,13 @@ use crate::types::player::Player;
 
 bind_interrupts!(struct Irqs {
     USART2 => embassy_stm32::usart::InterruptHandler<peripherals::USART2>;
-    I2C1 => embassy_stm32::i2c::InterruptHandler<peripherals::I2C1>;
+    I2C1 => embassy_stm32::i2c::EventInterruptHandler<peripherals::I2C1>, embassy_stm32::i2c::ErrorInterruptHandler<peripherals::I2C1>;
 });
 
 static mut USART2_RX_BUF: [u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE] =
     [0u8; components::serial_device::CARD_READER_RX_BUFFER_SIZE];
+
+const WAIT_DURATION_PER_PAGE: Duration = Duration::from_millis(20); // heuristic value
 
 pub fn hardware_init_mini_0v4(
     p: embassy_stm32::Peripherals,
@@ -67,6 +70,12 @@ pub fn hardware_init_mini_0v4(
         (tx, rx.into_ring_buffered(usart2_rx_buf))
     };
 
+    let i2c_config = {
+        let mut ret: embassy_stm32::i2c::Config = embassy_stm32::i2c::Config::default();
+        ret.timeout = WAIT_DURATION_PER_PAGE;
+        ret
+    };
+
     let i2c = I2c::new(
         p.I2C1,
         p.PB8,
@@ -76,6 +85,7 @@ pub fn hardware_init_mini_0v4(
         p.DMA1_CH3,
         Hertz(400_000),
         Default::default(),
+        i2c_config,
     );
 
     // InputReverseConfig::Halfword
