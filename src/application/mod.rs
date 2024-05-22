@@ -121,9 +121,14 @@ impl Application {
 
                         defmt::info!("Card Terminal asked {} times", did_we_ask);
 
+                        // Allow wait few times, because
+                        Timer::after(Duration::from_millis(100)).await;
+
                         card_reader
                             .send(CardTerminalTxCmd::RequestTerminalInfo)
                             .await;
+
+                        Timer::after(Duration::from_millis(500)).await;
 
                         card_reader
                             .send(CardTerminalTxCmd::RequestSaleSlotInfo)

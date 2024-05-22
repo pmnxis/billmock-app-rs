@@ -273,7 +273,9 @@ impl CardReaderDevice {
                                 CardTerminalError::BadLength | CardTerminalError::InvalidFrame => {
                                     stacked += rx_len;
                                 }
-                                _ => {}
+                                _ => {
+                                    defmt::debug!("Rx Buf : {:#X}", rx_source);
+                                }
                             }
                         }
                     }

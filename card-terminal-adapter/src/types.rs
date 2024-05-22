@@ -102,6 +102,7 @@ pub struct RawPortPulseCountDuration {
     pub inner: u32,
 }
 
+#[derive(defmt::Format)]
 pub struct SlotPriceGameNum {
     pub price: u32,
     pub game_num: u16,
@@ -128,6 +129,13 @@ impl From<RawU32SlotPriceGameNum> for SlotPriceGameNum {
     }
 }
 
+impl defmt::Format for RawU32SlotPriceGameNum {
+    fn format(&self, fmt: defmt::Formatter) {
+        let degrade = SlotPriceGameNum::from(self.clone());
+        defmt::write!(fmt, "{:?}", degrade);
+    }
+}
+
 impl RawU32SlotPriceGameNum {
     pub fn get_game_num(&self) -> u16 {
         (self.0 & ((1 << 10) - 1)) as u16
@@ -135,14 +143,14 @@ impl RawU32SlotPriceGameNum {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Zeroable, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Zeroable, PartialEq, PartialOrd, defmt::Format)]
 pub enum SlotProperty {
     Disabled,
     Enabled,
     TemporaryDisabled,
 }
 
-#[derive(Clone, Zeroable)]
+#[derive(Clone, Zeroable, defmt::Format)]
 pub struct RawCardPortBackup {
     // is enabled?
     pub property: SlotProperty,
@@ -171,7 +179,7 @@ impl RawCardPortBackup {
     }
 }
 
-#[derive(Clone, Zeroable)]
+#[derive(Clone, Zeroable, defmt::Format)]
 pub struct CardReaderPortBackup {
     pub raw_card_port_backup: [RawCardPortBackup; 4],
 }
@@ -179,6 +187,23 @@ pub struct CardReaderPortBackup {
 impl CardReaderPortBackup {
     pub fn empty_slot() -> Self {
         Self::zeroed()
+    }
+
+    pub fn is_zeroed(&self) -> bool {
+        unsafe {
+            let cast: &[u8] = core::slice::from_raw_parts(
+                (self as *const _) as *const u8,
+                core::mem::size_of::<CardReaderPortBackup>(),
+            );
+
+            for each in cast {
+                if *each != 0 {
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 
     // 0 is player 1, <- this is temporary decide,
@@ -198,8 +223,6 @@ impl CardReaderPortBackup {
         0
     }
 
-    // 0 is player 1, <- this is temporary decide,
-    // 1 is player 2, <- this is temporary decide,
     // player 1 port is generally 1
     // player 2 port is generally 2
     pub fn guess_raw_income_by_player(&self, player: u8) -> Option<&RawU24IncomeArcade> {

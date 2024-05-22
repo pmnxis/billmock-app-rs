@@ -36,7 +36,15 @@ impl PulseMemory {
     }
 
     pub fn is_stopped(&self) -> bool {
+        self.count.is_none()
+    }
+
+    pub fn is_running(&self) -> bool {
         self.count.is_some()
+    }
+
+    pub fn is_running_and_overtime(&self) -> bool {
+        self.is_running() && self.is_overtime()
     }
 
     pub fn mark(&mut self, timing_in_ms: u16) {
@@ -80,17 +88,25 @@ impl PulseMemoryFilterMachine {
 
     pub async fn report_when_expired(&mut self, board: &'static Board) {
         for player_index in [PLAYER_1_INDEX, PLAYER_2_INDEX] {
-            if self.player[player_index].is_overtime() {
+            if self.player[player_index].is_running_and_overtime() {
                 if let Some(assume_report) = board
                     .hardware
                     .eeprom
                     .lock_read(eeprom::select::CARD_PORT_BACKUP)
                     .await
-                    .guess_raw_income_by_player(player_index as u8)
+                    .guess_raw_income_by_player(1 + player_index as u8)
                 {
                     let actual = self.player[player_index].count.unwrap_or_default();
                     let expected = assume_report.get_pulse_count();
-                    defmt::warn!("Player {} - CashReceipt clock mismatch but ignored, actual : {}, expected : {}", player_index+1, actual, expected);
+                    if actual != expected {
+                        defmt::warn!("Player {} - CashReceipt clock mismatch but ignored, actual : {}, expected : {}", player_index+1, actual, expected);
+                    } else {
+                        defmt::info!(
+                            "Player {} - CashReceipt clock actual : {}",
+                            player_index + 1,
+                            actual
+                        );
+                    }
 
                     board
                         .hardware
