@@ -55,6 +55,8 @@ impl Application {
         let mut mutual_inhibit = MutualInhibit::new();
         let mut did_we_ask: u8 = 0;
         let mut did_we_alert_version_warning = false;
+        let mut did_we_received_slot_info = false;
+        let mut slot_info_asked_time = Instant::now();
         let mut filter_state = PulseMemoryFilterMachine::new();
         #[cfg(feature = "svc_button")]
         let (mut last_svc_pressed, mut is_svc_pressed): (Instant, bool) = (Instant::now(), false);
@@ -110,6 +112,28 @@ impl Application {
                 appmode = appmode_latest;
             }
 
+            // Try to receive slot_info (but we need to modify this routine later)
+            if did_we_ask != 0 && !did_we_received_slot_info {
+                let now = Instant::now();
+                if (slot_info_asked_time + Duration::from_secs(5)) < now {
+                    slot_info_asked_time = now;
+
+                    card_reader
+                        .send(CardTerminalTxCmd::RequestSaleSlotInfo)
+                        .await;
+
+                    if !board
+                        .hardware
+                        .eeprom
+                        .lock_read(eeprom::select::CARD_PORT_BACKUP)
+                        .await
+                        .is_zeroed()
+                    {
+                        did_we_received_slot_info = true;
+                    }
+                }
+            }
+
             if let Ok(x) = card_reader.recv_channel.try_receive() {
                 match x {
                     CardTerminalRxCmd::RequestDeviceInfo => {
@@ -133,6 +157,8 @@ impl Application {
                         card_reader
                             .send(CardTerminalTxCmd::RequestSaleSlotInfo)
                             .await;
+
+                        slot_info_asked_time = Instant::now();
                     }
                     CardTerminalRxCmd::AlertPaymentIncomeArcade(raw_income) => {
                         // judge current application mode and income backup
