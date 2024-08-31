@@ -113,6 +113,8 @@ impl Application {
             }
 
             // Try to receive slot_info (but we need to modify this routine later)
+            // internal slot info is not guarantee correctness
+            // thus try to receive again on init
             if did_we_ask != 0 && !did_we_received_slot_info {
                 let now = Instant::now();
                 if (slot_info_asked_time + Duration::from_secs(5)) < now {
