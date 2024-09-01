@@ -10,6 +10,7 @@
 #![feature(async_fn_in_trait)]
 #![allow(stable_features)]
 #![feature(type_alias_impl_trait)]
+#![feature(impl_trait_in_assoc_type)]
 #![feature(effects)] // see : https://github.com/rust-lang/rust/issues/114808
 
 mod application;
@@ -71,7 +72,7 @@ async fn initial_eeprom(eeprom: &crate::components::eeprom::Novella) {
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     // Initialize necessary BSP
-    let board: &'static mut Board = make_static!(Board::init());
+    let board: &mut Board = make_static!(Board::init());
 
     // init hardware eeprom
     // Count up boot count and show uptime though DAP.

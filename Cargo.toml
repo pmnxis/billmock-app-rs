@@ -5,7 +5,7 @@
 [package]
 name = "billmock-app-rs"
 edition = "2021"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Jinwoo Park <pmnxis@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "application side of billmock hardware, powered by rust-embedded"
@@ -24,12 +24,12 @@ hw_mini_0v4 = ["eeprom"]
 hw_mini_0v5 = ["eeprom", "svc_button"]
 
 [dependencies]
-embassy-sync = { version = "0.5.0", features = ["defmt"] }
-embassy-executor = { version = "0.5.0", features = ["nightly", "arch-cortex-m", "executor-thread", "defmt", "integrated-timers"] }
+embassy-sync = { version = "0.6.0", features = ["defmt"] }
+embassy-executor = { version = "0.6.0", features = ["nightly", "arch-cortex-m", "executor-thread", "defmt", "integrated-timers"] }
 embassy-futures = { version = "0.1.0", features = ["defmt"] }
 embassy-time = { version = "0.3.0", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-32_768"] }
 embassy-stm32 = { version = "0.1.0", features = ["defmt", "time-driver-any", "stm32g030c8", "memory-x", "unstable-pac", "exti", "time"] } # "unstable-traits" for use InputPin trait for gpio
-embassy-embedded-hal = { version = "^0.1.0" }
+embassy-embedded-hal = { version = "^0.2.0" }
 defmt = "0.3.6"
 defmt-rtt = "0.4"
 
@@ -37,7 +37,7 @@ cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-sing
 cortex-m-rt = "0.7.3" # 0.7.0
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 futures = { version = "0.3.17", default-features = false, features = ["async-await"] }
-static_cell = { version = "1.2", features = ["nightly"] }
+static_cell = { version = "1.3", features = ["nightly"] }
 num_enum = { version = "0.7.0", default-features = false } # Application specific import (only `no_std` crates alllowed)
 bit_field = "0.10"
 nonmax = { version = "0.5.3", default-features = false, features = [] } # to use common NonMax

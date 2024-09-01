@@ -31,6 +31,7 @@ where
     /// That is, this conversion is whatever the implementation of
     /// <code>[ConstFrom]&lt;T&gt; for U</code> chooses to do.
     #[inline]
+    #[track_caller]
     fn const_into(self) -> U {
         U::const_from(self)
     }

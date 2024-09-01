@@ -72,6 +72,8 @@ pub enum CardTerminalRxCmd {
     /// Detail pakcet data should be parsed with additional function call.
     /// using additional function call for avoid queue size being huge.
     ResponseTerminalInfo(TidStatus, TerminalVersion),
+    /// Set Pulse State
+    RequestKeepPulseState(PulseStateRequest),
 }
 
 #[derive(PartialEq, Eq, Clone, defmt::Format)]
@@ -89,10 +91,14 @@ pub enum CardTerminalTxCmd {
     /// Overwrite sale slot info to card terminal
     /// It's for rollback or treat as inihibit action
     PushSaleSlotInfo,
+    /// [Deprecated]
     /// Mixed request of PushSaleSlotInfo,
     /// Unfortunately, this feature is still unstable due to sequence logic issues
     /// in the real environment. Therefore, we do not recommend using it at this time.
     PushSaleSlotInfoPartialInhibit(RawPlayersInhibit),
+    /// Set availability of transactions
+    /// New method instead of PushSaleSlotInfoPartialInhibit
+    SetTransactionAvailability(bool),
     /// Request terminal info, include TID, terminal program version etc.
     RequestTerminalInfo,
     /// Display ROM (P1/P2 Card and Coin Meter)
@@ -117,7 +123,7 @@ pub const FW_VER_LEN: usize = 5;
 pub const DEV_SN_LEN: usize = 12;
 pub const GIT_HASH_LEN: usize = 9;
 
-#[const_trait]
+// #[const_trait]
 pub trait CardTerminalConst {
     fn is_nda() -> bool;
 }
@@ -170,6 +176,7 @@ pub trait CardTerminalTxGen {
         port_backup: &CardReaderPortBackup,
     ) -> &'a [u8];
 
+    /// [Deprecated]
     /// Generate PushSaleSlotInfoPartialInhibit signal to send
     /// This action send with modificated slots to inhibit sale slot for inhibit behavior
     fn push_sale_slot_info_partial_inhibit<'a>(
@@ -177,6 +184,10 @@ pub trait CardTerminalTxGen {
         buffer: &'a mut [u8],
         port_backup: &CardReaderPortBackup,
     ) -> &'a [u8];
+
+    /// Generate SetTransactionAvailability signal to send
+    /// This is inversed boolean of SetInhibit
+    fn push_transaction_availability<'a>(&self, buffer: &'a mut [u8], is_avail: bool) -> &'a [u8];
 
     /// Generate RequestSaleSlotInfo signal to send
     fn request_sale_slot_info<'a>(&self, buffer: &'a mut [u8]) -> &'a [u8];

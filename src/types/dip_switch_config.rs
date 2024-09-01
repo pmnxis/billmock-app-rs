@@ -24,7 +24,7 @@ use crate::semi_layer::timing::ToggleTiming;
 /// | `1`           |  `1`          | Force 1 signal per 1000 KRW   |
 ///
 /// - `10` and `11` : Ignore signal count field comes from serial communication,
-///  decide number of output signal count from price field.
+///   decide number of output signal count from price field.
 #[derive(TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 #[allow(dead_code)]
@@ -51,11 +51,11 @@ pub enum PriceReflection {
 /// | `1`           |  `1`          | Override inhibit globally       |
 ///
 /// - By override for each player by dip switch setting, regardless of game I/O signal,
-///  it is forcibly set to inhibit state.
+///   it is forcibly set to inhibit state.
 /// - Even if there is no override in the dip switch settings,
-///  if inhibit is enabled on the host game I/O side, inhibit for each player is activated.
+///   if inhibit is enabled on the host game I/O side, inhibit for each player is activated.
 /// - This Inhibit DIP Switch setting can be used to prohibit currency acquisition
-///  of a device that has under the maintenance in the field engineer.
+///   of a device that has under the maintenance in the field engineer.
 #[derive(TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, Copy, Clone)]
 #[repr(u8)]
 #[allow(dead_code)]
@@ -134,13 +134,13 @@ impl defmt::Format for InhibitOverride {
 /// | `1`           |  `1`          | Force 200mS active low        |
 ///
 /// - Timing SW `00` (Auto), for the active-low output signal,
-///  the pulse duration provided by serial communication or
-///  the pulse duration measurement value of parallel communication (legacy coin & bill acceptor)
-///  is set separately according to the signal source.
-///  If both are unavailable, the default value (100 mS) will be used.
+///   the pulse duration provided by serial communication or
+///   the pulse duration measurement value of parallel communication (legacy coin & bill acceptor)
+///   is set separately according to the signal source.
+///   If both are unavailable, the default value (100 mS) will be used.
 ///
 /// - Timing SW `01`, `10`, `11` ignores the pulse duration of all signal sources and
-///  fixes it to one of 50 mS, 100 mS, and 200 mS and outputs it.
+///   fixes it to one of 50 mS, 100 mS, and 200 mS and outputs it.
 #[derive(TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd)]
 #[repr(u8)]
 #[allow(dead_code)]
