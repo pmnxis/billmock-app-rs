@@ -103,9 +103,9 @@ impl Hardware {
 
     /// Initialize MCU PLL and CPU on init hardware
     /// > `Hardware::mcu_pre_init()`
-    /// 2 `make_static!(SharedResource::init())`
-    /// 3 `Hardware::hardware_init(..)`
-    /// 4 `hardware.start_tasks(..)`
+    /// > 2 `make_static!(SharedResource::init())`
+    /// > 3 `Hardware::hardware_init(..)`
+    /// > 4 `hardware.start_tasks(..)`
     pub fn mcu_pre_init() -> embassy_stm32::Peripherals {
         embassy_stm32::init(Self::mcu_default_config())
     }
@@ -114,7 +114,7 @@ impl Hardware {
     /// 1 `Hardware::mcu_pre_init()`
     /// 2 `make_static!(SharedResource::init())`
     /// > `Hardware::hardware_init(..)`
-    /// 4 `hardware.start_tasks(..)`
+    /// > 4 `hardware.start_tasks(..)`
     fn hardware_init(
         peripherals: embassy_stm32::Peripherals,
         shared_resource: &'static SharedResource,
@@ -218,8 +218,8 @@ impl SharedResource {
     /// Initialize necessary shared resource
     /// 1 `Hardware::mcu_pre_init()`
     /// > `make_static!(SharedResource::init())`
-    /// 3 `Hardware::hardware_init(..)`
-    /// 4 `hardware.start_tasks(..)`
+    /// > 3 `Hardware::hardware_init(..)`
+    /// > 4 `hardware.start_tasks(..)`
     fn init() -> Self {
         Self {
             async_input_event_ch: BufferedWaitReceiver::new(),

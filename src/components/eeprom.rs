@@ -152,7 +152,7 @@ impl NvMemSectionKind {
         if idx >= SECTION_NUM as u8 {
             None
         } else {
-            unsafe { Some(core::mem::transmute(idx)) }
+            unsafe { Some(core::mem::transmute::<u8, NvMemSectionKind>(idx)) }
         }
     }
 
@@ -1199,11 +1199,15 @@ impl Novella {
         self.set_write_protect();
         crc.reset();
 
+        #[allow(clippy::needless_range_loop)]
         for sect_idx in 0..SECTION_TABLE.len() {
+            // for (sect_idx, section) in SECTION_TABLE.iter().enumerate() {
             let kind = NvMemSectionKind::from(sect_idx as u8);
             let (mut longest_per_sector, mut longest_slot) = (Duration::from_ticks(0), None);
 
+            #[allow(clippy::needless_range_loop)]
             for slot_idx in 0..SECTION_TABLE[sect_idx].slot_num {
+                // for slot_idx in 0..section.slot_num {
                 match self.raw_slot_read(&mut cb, kind, slot_idx) {
                     Ok(uptime) => {
                         if longest_per_sector <= uptime {
@@ -1254,10 +1258,13 @@ impl Novella {
         }
 
         broken_map_idx = 0;
+        #[allow(clippy::needless_range_loop)]
         for sect_idx in 0..SECTION_TABLE.len() {
+            // for (sect_idx, section) in SECTION_TABLE.iter().enumerate() {
             let kind = NvMemSectionKind::from(sect_idx as u8);
 
             for slot_idx in 0..SECTION_TABLE[sect_idx].slot_num {
+                // for slot_idx in 0..section.slot_num {
                 if (broken_map[broken_map_idx >> 3] & (1 << (broken_map_idx & 0x7))) != 0 {
                     defmt::debug!(
                         "Fixing broken slot... [{}], sect = {}, slot = {}",
@@ -1367,12 +1374,15 @@ impl Novella {
         let mut every_2sec = 0u8;
 
         loop {
+            #[allow(clippy::needless_range_loop)]
             for sect_idx in 0..SECTION_TABLE.len() {
+                // for (sect_idx, section) in SECTION_TABLE.iter().enumerate() {
                 let kind = NvMemSectionKind::from(sect_idx as u8);
                 let mut cb = self.mem_storage.lock().await;
 
                 let dirty_or_next_slot =
                     cb.controls[sect_idx].test_and_robin(&SECTION_TABLE[sect_idx]);
+                // let dirty_or_next_slot = cb.controls[sect_idx].test_and_robin(section);
 
                 if let Some(next_slot) = dirty_or_next_slot {
                     let new_uptime = self.get_uptime();
