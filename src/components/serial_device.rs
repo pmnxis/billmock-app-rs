@@ -14,21 +14,24 @@ use embassy_stm32::peripherals::{DMA1_CH1, DMA1_CH2};
 use embassy_stm32::usart::{RingBufferedUartRx, UartTx};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{with_timeout, Duration};
+use embassy_time::{with_timeout, Duration, Instant};
 
 use crate::components::eeprom::{self, *};
 use crate::const_str;
 
-const CARD_READER_COMMAND_CHANNEL_SIZE: usize = 8;
+const CARD_READER_COMMAND_CHANNEL_SIZE_RX: usize = 8;
+const CARD_READER_COMMAND_CHANNEL_SIZE_TX: usize = 16;
+const WAIT_DURATION_RX: Duration = Duration::from_millis(200); // heuristic value
+const WAIT_DURATION_TX: Duration = Duration::from_millis(3000); // heuristic value
 
 pub const CARD_READER_RX_BUFFER_SIZE: usize = 128; // most of packet is 320~330 bytes
 pub const CARD_READER_TX_BUFFER_SIZE: usize = 128; // most of pakcet is 6~12 bytes, but some uncommon command can be long
 
 pub type CardReaderResponseChannel =
-    Channel<ThreadModeRawMutex, CardTerminalRxCmd, CARD_READER_COMMAND_CHANNEL_SIZE>;
+    Channel<ThreadModeRawMutex, CardTerminalRxCmd, CARD_READER_COMMAND_CHANNEL_SIZE_RX>;
 
 pub type CardReaderRequestChannel =
-    Channel<ThreadModeRawMutex, CardTerminalTxCmd, CARD_READER_COMMAND_CHANNEL_SIZE>;
+    Channel<ThreadModeRawMutex, CardTerminalTxCmd, CARD_READER_COMMAND_CHANNEL_SIZE_TX>;
 
 pub struct CardReaderDevice {
     // USART is complex to use generic
@@ -73,11 +76,18 @@ impl CardReaderDevice {
         let mut rx_buf = [0u8; CARD_READER_RX_BUFFER_SIZE];
         let mut tx_buf = [0u8; CARD_READER_TX_BUFFER_SIZE];
         let mut stacked: StackedRingbufferRxIndex = 0;
+        let mut last_tx = Instant::now();
 
         loop {
             // TX not hang on IO wait
             if stacked == 0 {
-                if let Ok(tx_cmd) = self.req_channel.try_receive() {
+                let now = Instant::now();
+
+                // Card terminal has shallow buffer on receive
+                // Billmock should consider it's processing time.
+                if let Some(Ok(tx_cmd)) =
+                    ((last_tx + WAIT_DURATION_TX) < now).then(|| self.req_channel.try_receive())
+                {
                     defmt::info!("CardTerminalTxCmd : {}", tx_cmd);
 
                     let send_source = match tx_cmd {
@@ -89,6 +99,8 @@ impl CardReaderDevice {
                             const_str::get_serial_number(),
                         ),
                         CardTerminalTxCmd::PushCoinPaperAcceptorIncome(x) => {
+                            last_tx = now;
+
                             plug.alert_coin_paper_acceptor_income(&mut tx_buf, x)
                         }
                         CardTerminalTxCmd::PushSaleSlotInfo => {
@@ -169,7 +181,7 @@ impl CardReaderDevice {
             }
 
             // RX work
-            match with_timeout(Duration::from_millis(200), rx.read(&mut rx_buf[stacked..])).await {
+            match with_timeout(WAIT_DURATION_RX, rx.read(&mut rx_buf[stacked..])).await {
                 Ok(Ok(rx_len)) => {
                     // for debug
                     let re_len = stacked + rx_len;

@@ -63,6 +63,9 @@ impl Application {
         #[cfg(feature = "svc_button")]
         let eeprom = &hardware.eeprom;
 
+        // Show HW info when update firmware using SWD directly
+        card_reader.send(CardTerminalTxCmd::DisplayHwInfo).await;
+
         loop {
             // timing flag would be used in future implementation.
             // reading dipsw will be changed to actor model
