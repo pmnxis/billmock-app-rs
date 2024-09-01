@@ -82,15 +82,14 @@ impl MutualInhibit {
             inhibit_1p.set_level(p1).await;
             inhibit_2p.set_level(p2).await;
 
+            // ED785 doesn't support inhibit signal well....
             // serial_credit
             //     .send_inhibit(RawPlayersInhibit { p1, p2 })
             //     .await;
 
-            if InhibitOverride::ForceInhibitGlobal == x {
-                serial_credit.send_transaction_availability(false).await;
-            } else {
-                serial_credit.send_transaction_availability(true).await;
-            }
+            serial_credit
+                .send_transaction_availability(InhibitOverride::ForceInhibitGlobal != x)
+                .await;
         }
     }
 }
