@@ -123,7 +123,7 @@ pub const FW_VER_LEN: usize = 5;
 pub const DEV_SN_LEN: usize = 12;
 pub const GIT_HASH_LEN: usize = 9;
 
-#[const_trait]
+// #[const_trait]
 pub trait CardTerminalConst {
     fn is_nda() -> bool;
 }

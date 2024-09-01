@@ -19,8 +19,7 @@ card-terminal-adapter = { path = "../card-terminal-adapter" } # Import generic i
 
 defmt = "0.3"
 defmt-test = "0.3.0"
-crc = "3.0.1"
+crc = "3.2.1"
 
 [dev-dependencies]
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
-

@@ -6,7 +6,8 @@
 # https://rust-lang.github.io/rustup-components-history
 [toolchain]
 # channel = "nightly-2023-11-01"
-channel = "nightly-2024-04-14"
+# Since Nightly 2024-06-13 make_static doesn't work, https://github.com/embassy-rs/static-cell/issues/16
+channel = "nightly-2024-06-12"
 components = [ "rust-src", "rustfmt", "llvm-tools", "rust-analyzer" ]
 targets = [
     "thumbv6m-none-eabi",
